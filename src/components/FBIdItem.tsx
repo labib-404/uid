@@ -95,11 +95,13 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const compact = viewMode === "compact";
 
   return (
-    <div className="relative">
-      {/* swipe-delete background */}
-      <div className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6">
-        <Trash2 className="text-destructive-foreground w-5 h-5" />
-      </div>
+    <div className="relative overflow-hidden rounded-xl">
+      {/* swipe-delete background — only visible while swiping */}
+      {showDelete && (
+        <div className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none">
+          <Trash2 className="text-destructive-foreground w-5 h-5" />
+        </div>
+      )}
       <motion.div
         drag="x"
         dragConstraints={{ left: -200, right: 0 }}
@@ -107,7 +109,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         animate={controls}
         onDrag={(_, info) => setShowDelete(info.offset.x < -60)}
         onDragEnd={onDragEnd}
-        className={`relative glass rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
+        className={`relative bg-card border border-border/60 rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
       >
         <div className="flex items-start gap-2">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
