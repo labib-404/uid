@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { motion, PanInfo, useAnimation } from "framer-motion";
 import {
-  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical
+  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical,
+  RefreshCw, Users, MapPin, Instagram
 } from "lucide-react";
 import { FBId, TAGS, TAG_COLORS, Tag } from "@/types/fbid";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/hooks/useSettings";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Props {
   item: FBId;
@@ -27,6 +29,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const { viewMode } = useSettings();
   const controls = useAnimation();
   const [showDelete, setShowDelete] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   const update = async (patch: Partial<FBId>) => {
     const optimistic = { ...item, ...patch };
@@ -59,6 +62,36 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
 
   const setTag = (t: Tag | null) => update({ tag: t });
 
+  const fetchProfile = async () => {
+    setFetching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
+        body: { uids: [item.uid] },
+      });
+      if (error) throw error;
+      const r = data?.results?.[item.uid];
+      if (!r || r.error) {
+        toast.error(r?.error === "rate_limited" ? "Rate limited, try later" : "Profile not found");
+      } else {
+        onChange({
+          ...item,
+          real_name: r.name,
+          username: r.username,
+          photo_url: r.photoUrl,
+          follower_count: r.followerCount,
+          nationality: r.nationality,
+          instagram_username: r.instagramUsername,
+          profile_fetched_at: new Date().toISOString(),
+        });
+        toast.success("Profile fetched");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const compact = viewMode === "compact";
 
   return (
@@ -79,13 +112,23 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         <div className="flex items-start gap-2">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
 
+          {item.photo_url && (
+            <Avatar className="h-9 w-9 shrink-0">
+              <AvatarImage src={item.photo_url} alt={item.real_name ?? item.uid} />
+              <AvatarFallback>{(item.real_name ?? item.uid).slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          )}
+
           <div className="flex-1 min-w-0">
+            {item.real_name && (
+              <div className="text-sm font-semibold truncate">{item.real_name}</div>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={openLink}
-                className={`font-semibold truncate hover:underline flex items-center gap-1 ${item.visited ? "text-muted-foreground line-through" : "text-foreground"}`}
+                className={`text-sm truncate hover:underline flex items-center gap-1 ${item.visited ? "text-muted-foreground line-through" : item.real_name ? "text-muted-foreground" : "text-foreground font-semibold"}`}
               >
-                {item.uid}
+                {item.username ?? item.uid}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
               {item.visited && <Check className="w-3.5 h-3.5 text-success" style={{ color: "hsl(var(--success))" }} />}
@@ -95,6 +138,25 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 </span>
               )}
             </div>
+            {!compact && (item.follower_count || item.nationality || item.instagram_username) && (
+              <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
+                {item.follower_count && (
+                  <span className="flex items-center gap-1"><Users className="w-3 h-3" />{item.follower_count}</span>
+                )}
+                {item.nationality && (
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{item.nationality}</span>
+                )}
+                {item.instagram_username && (
+                  <a
+                    href={`https://instagram.com/${item.instagram_username}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-foreground"
+                  >
+                    <Instagram className="w-3 h-3" />@{item.instagram_username}
+                  </a>
+                )}
+              </div>
+            )}
             {!compact && item.password && (
               <div className="text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-2">
                 <span>••••••••</span>
@@ -131,6 +193,10 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={fetchProfile} disabled={fetching}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+                  {item.profile_fetched_at ? "Refresh profile" : "Fetch profile"}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => update({ visited: !item.visited, visited_at: !item.visited ? new Date().toISOString() : null })}>
                   <Check className="w-4 h-4 mr-2" /> Mark {item.visited ? "unchecked" : "checked"}
                 </DropdownMenuItem>
