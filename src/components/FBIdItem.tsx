@@ -114,12 +114,17 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         <div className="flex items-start gap-2">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
 
-          {item.photo_url && (
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarImage src={item.photo_url} alt={item.real_name ?? item.uid} />
-              <AvatarFallback>{(item.real_name ?? item.uid).slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          )}
+          <Avatar className="h-10 w-10 shrink-0">
+            {item.photo_url && (
+              <AvatarImage
+                src={`https://images.weserv.nl/?url=${encodeURIComponent(item.photo_url.replace(/^https?:\/\//, ""))}&w=80&h=80&fit=cover`}
+                alt={item.real_name ?? item.uid}
+              />
+            )}
+            <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+              {(item.real_name ?? item.uid).slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
           <div className="flex-1 min-w-0">
             {item.real_name && (
