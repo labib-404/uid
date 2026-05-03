@@ -95,11 +95,13 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const compact = viewMode === "compact";
 
   return (
-    <div className="relative">
-      {/* swipe-delete background */}
-      <div className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6">
-        <Trash2 className="text-destructive-foreground w-5 h-5" />
-      </div>
+    <div className="relative overflow-hidden rounded-xl">
+      {/* swipe-delete background — only visible while swiping */}
+      {showDelete && (
+        <div className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none">
+          <Trash2 className="text-destructive-foreground w-5 h-5" />
+        </div>
+      )}
       <motion.div
         drag="x"
         dragConstraints={{ left: -200, right: 0 }}
@@ -107,17 +109,22 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         animate={controls}
         onDrag={(_, info) => setShowDelete(info.offset.x < -60)}
         onDragEnd={onDragEnd}
-        className={`relative glass rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
+        className={`relative bg-card border border-border/60 rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
       >
         <div className="flex items-start gap-2">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
 
-          {item.photo_url && (
-            <Avatar className="h-9 w-9 shrink-0">
-              <AvatarImage src={item.photo_url} alt={item.real_name ?? item.uid} />
-              <AvatarFallback>{(item.real_name ?? item.uid).slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          )}
+          <Avatar className="h-10 w-10 shrink-0">
+            {item.photo_url && (
+              <AvatarImage
+                src={`https://images.weserv.nl/?url=${encodeURIComponent(item.photo_url.replace(/^https?:\/\//, ""))}&w=80&h=80&fit=cover`}
+                alt={item.real_name ?? item.uid}
+              />
+            )}
+            <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+              {(item.real_name ?? item.uid).slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
           <div className="flex-1 min-w-0">
             {item.real_name && (
