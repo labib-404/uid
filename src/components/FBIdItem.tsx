@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { motion, PanInfo, useAnimation } from "framer-motion";
+import { useState } from "react";
+import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
   Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical,
   RefreshCw, Users, MapPin, Instagram
@@ -27,9 +27,10 @@ interface Props {
 
 export default function FBIdItem({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote }: Props) {
   const { viewMode } = useSettings();
-  const controls = useAnimation();
-  const [showDelete, setShowDelete] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const x = useMotionValue(0);
+  const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
+  const iconScale = useTransform(x, [-160, -60, 0], [1, 0.6, 0.4]);
 
   const update = async (patch: Partial<FBId>) => {
     const optimistic = { ...item, ...patch };
@@ -51,12 +52,11 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   };
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x < -120) {
-      controls.start({ x: -1000, opacity: 0 });
-      setTimeout(onDelete, 200);
+    const shouldDelete = info.offset.x < -120 || info.velocity.x < -600;
+    if (shouldDelete) {
+      animate(x, -window.innerWidth, { duration: 0.25, ease: "easeOut", onComplete: onDelete });
     } else {
-      controls.start({ x: 0 });
-      setShowDelete(false);
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
     }
   };
 
@@ -95,19 +95,22 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const compact = viewMode === "compact";
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* swipe-delete background — only visible while swiping */}
-      {showDelete && (
-        <div className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none">
+    <div className="relative overflow-hidden rounded-xl touch-pan-y">
+      {/* swipe-delete background — opacity tracks drag */}
+      <motion.div
+        style={{ opacity: bgOpacity }}
+        className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none"
+      >
+        <motion.div style={{ scale: iconScale }}>
           <Trash2 className="text-destructive-foreground w-5 h-5" />
-        </div>
-      )}
+        </motion.div>
+      </motion.div>
       <motion.div
         drag="x"
+        dragDirectionLock
         dragConstraints={{ left: -200, right: 0 }}
-        dragElastic={0.1}
-        animate={controls}
-        onDrag={(_, info) => setShowDelete(info.offset.x < -60)}
+        dragElastic={{ left: 0.2, right: 0 }}
+        style={{ x }}
         onDragEnd={onDragEnd}
         className={`relative bg-card border border-border/60 rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
       >
