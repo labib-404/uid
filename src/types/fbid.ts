@@ -9,6 +9,13 @@ export type FBId = {
   tag: string | null;
   visited_at: string | null;
   created_at: string;
+  real_name?: string | null;
+  username?: string | null;
+  photo_url?: string | null;
+  follower_count?: string | null;
+  nationality?: string | null;
+  instagram_username?: string | null;
+  profile_fetched_at?: string | null;
 };
 
 export const TAGS = ["VIP", "Hot", "New", "Done", "Skip"] as const;

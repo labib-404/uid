@@ -17,37 +17,58 @@ export type Database = {
       facebook_ids: {
         Row: {
           created_at: string
+          follower_count: string | null
           id: string
+          instagram_username: string | null
+          nationality: string | null
           note: string | null
           password: string | null
+          photo_url: string | null
           pinned: boolean
+          profile_fetched_at: string | null
+          real_name: string | null
           tag: string | null
           uid: string
           user_id: string
+          username: string | null
           visited: boolean
           visited_at: string | null
         }
         Insert: {
           created_at?: string
+          follower_count?: string | null
           id?: string
+          instagram_username?: string | null
+          nationality?: string | null
           note?: string | null
           password?: string | null
+          photo_url?: string | null
           pinned?: boolean
+          profile_fetched_at?: string | null
+          real_name?: string | null
           tag?: string | null
           uid: string
           user_id: string
+          username?: string | null
           visited?: boolean
           visited_at?: string | null
         }
         Update: {
           created_at?: string
+          follower_count?: string | null
           id?: string
+          instagram_username?: string | null
+          nationality?: string | null
           note?: string | null
           password?: string | null
+          photo_url?: string | null
           pinned?: boolean
+          profile_fetched_at?: string | null
+          real_name?: string | null
           tag?: string | null
           uid?: string
           user_id?: string
+          username?: string | null
           visited?: boolean
           visited_at?: string | null
         }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Check, Star, Copy, Download, X } from "lucide-react";
+import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
 import { useSettings } from "@/hooks/useSettings";
 import FBIdItem from "@/components/FBIdItem";
@@ -157,6 +157,42 @@ export default function Home() {
     toast.success(`Copied ${sel.length}`);
   };
 
+  const bulkFetchProfiles = async () => {
+    if (!selected.size) return;
+    const sel = items.filter((i) => selected.has(i.id));
+    const uids = sel.map((s) => s.uid);
+    toast.info(`Fetching ${uids.length} profile(s)…`);
+    // chunk to 20
+    const chunks: string[][] = [];
+    for (let i = 0; i < uids.length; i += 20) chunks.push(uids.slice(i, i + 20));
+    for (const chunk of chunks) {
+      const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
+        body: { uids: chunk },
+      });
+      if (error) {
+        toast.error(error.message);
+        continue;
+      }
+      const results = data?.results ?? {};
+      setItems((prev) => prev.map((p) => {
+        const r = results[p.uid];
+        if (!r || r.error) return p;
+        return {
+          ...p,
+          real_name: r.name,
+          username: r.username,
+          photo_url: r.photoUrl,
+          follower_count: r.followerCount,
+          nationality: r.nationality,
+          instagram_username: r.instagramUsername,
+          profile_fetched_at: new Date().toISOString(),
+        };
+      }));
+    }
+    toast.success("Profiles updated");
+    clearSel();
+  };
+
   const exportFile = (kind: "txt" | "csv", scope: "all" | "checked" | "unchecked" | "saved") => {
     let data = items;
     if (scope === "checked") data = data.filter((i) => i.visited);
@@ -242,6 +278,9 @@ export default function Home() {
             </Button>
             <Button size="sm" variant="ghost" onClick={() => bulkUpdate({ pinned: true })}>
               <Star className="w-4 h-4 mr-1" /> Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={bulkFetchProfiles}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Fetch
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
