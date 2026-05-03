@@ -144,8 +144,3 @@ All colors MUST be HSL.
   .animate-shake { animation: shake 0.4s ease-in-out; }
 }
 
-/* placeholder for body block end */
-@layer base {
-  body { /* keep block parsable */
-  }
-}
