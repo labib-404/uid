@@ -8,9 +8,11 @@ type Settings = {
   fontSize: FontSize;
   viewMode: ViewMode;
   theme: Theme;
+  swipeDelete: boolean;
   setFontSize: (s: FontSize) => void;
   setViewMode: (v: ViewMode) => void;
   setTheme: (t: Theme) => void;
+  setSwipeDelete: (b: boolean) => void;
 };
 
 const Ctx = createContext<Settings>({} as Settings);
@@ -25,6 +27,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem("theme") as Theme) || "dark"
   );
+  const [swipeDelete, setSwipeDelete] = useState<boolean>(
+    () => localStorage.getItem("swipeDelete") !== "false"
+  );
 
   useEffect(() => localStorage.setItem("fontSize", fontSize), [fontSize]);
   useEffect(() => localStorage.setItem("viewMode", viewMode), [viewMode]);
@@ -32,9 +37,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("theme", theme);
     document.documentElement.classList.toggle("light", theme === "light");
   }, [theme]);
+  useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
 
   return (
-    <Ctx.Provider value={{ fontSize, viewMode, theme, setFontSize, setViewMode, setTheme }}>
+    <Ctx.Provider value={{ fontSize, viewMode, theme, swipeDelete, setFontSize, setViewMode, setTheme, setSwipeDelete }}>
       {children}
     </Ctx.Provider>
   );
