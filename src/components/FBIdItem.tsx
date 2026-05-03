@@ -31,6 +31,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
   const iconScale = useTransform(x, [-160, -60, 0], [1, 0.6, 0.4]);
+  const [axisLocked, setAxisLocked] = useState<"x" | "y" | null>(null);
 
   const update = async (patch: Partial<FBId>) => {
     const optimistic = { ...item, ...patch };
@@ -52,6 +53,11 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   };
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
+    setAxisLocked(null);
+    if (axisLocked === "y") {
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
+      return;
+    }
     const shouldDelete = info.offset.x < -120 || info.velocity.x < -600;
     if (shouldDelete) {
       animate(x, -window.innerWidth, { duration: 0.25, ease: "easeOut", onComplete: onDelete });
@@ -115,6 +121,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
           ? {
               drag: "x" as const,
               dragDirectionLock: true,
+              onDirectionLock: (axis: "x" | "y") => setAxisLocked(axis),
               dragConstraints: { left: -200, right: 0 },
               dragElastic: { left: 0.2, right: 0 },
               style: { x },
