@@ -147,7 +147,16 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
 
           <div className="flex-1 min-w-0">
             {item.real_name && (
-              <div className="text-sm font-semibold truncate">{item.real_name}</div>
+              <div className="flex items-center gap-1.5">
+                <div className="text-sm font-semibold truncate">{item.real_name}</div>
+                <button
+                  onClick={() => copy(item.real_name!, "Name")}
+                  className="text-muted-foreground hover:text-foreground shrink-0"
+                  title="Copy name"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
             )}
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -157,6 +166,22 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 {item.username ?? item.uid}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
+              <button
+                onClick={() => copy(item.username ?? item.uid, item.username ? "Username" : "UID")}
+                className="text-muted-foreground hover:text-foreground"
+                title="Copy"
+              >
+                <Copy className="w-3 h-3" />
+              </button>
+              {item.username && (
+                <button
+                  onClick={() => copy(item.uid, "UID")}
+                  className="text-[10px] px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/40 font-mono"
+                  title="Copy UID"
+                >
+                  UID
+                </button>
+              )}
               {item.visited && <Check className="w-3.5 h-3.5 text-success" style={{ color: "hsl(var(--success))" }} />}
               {item.tag && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded border ${TAG_COLORS[item.tag as Tag] || ""}`}>
@@ -184,10 +209,21 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
               </div>
             )}
             {!compact && item.password && (
-              <div className="text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-2">
-                <span>••••••••</span>
-                <button onClick={() => copy(item.password!, "Password")} className="hover:text-foreground">
-                  <Copy className="w-3 h-3" />
+              <div className="text-xs text-muted-foreground font-mono mt-1 flex items-center gap-2">
+                <span className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/40">••••••••</span>
+                <button
+                  onClick={() => copy(item.password!, "Password")}
+                  className="hover:text-foreground flex items-center gap-1"
+                  title="Copy password"
+                >
+                  <Copy className="w-3 h-3" /> Pass
+                </button>
+                <button
+                  onClick={() => copy(`${item.uid}|${item.password}`, "UID|Pass")}
+                  className="hover:text-foreground flex items-center gap-1"
+                  title="Copy UID|Pass"
+                >
+                  <Copy className="w-3 h-3" /> UID|Pass
                 </button>
               </div>
             )}
