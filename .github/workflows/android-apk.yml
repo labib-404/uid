@@ -1,6 +1,5 @@
 name: Build Android APK
 
-
 on:
   workflow_dispatch:
   push:
@@ -31,9 +30,13 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: "gradle"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools-version: 34.0.0
 
       - name: Install dependencies
         run: npm ci
@@ -55,7 +58,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon -x lint
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
