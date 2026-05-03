@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function FBIdItem({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote }: Props) {
-  const { viewMode } = useSettings();
+  const { viewMode, swipeDelete } = useSettings();
   const [fetching, setFetching] = useState(false);
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
@@ -92,26 +92,35 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
     }
   };
 
+  const confirmDelete = () => {
+    if (window.confirm(`Delete ${item.uid}?`)) onDelete();
+  };
+
   const compact = viewMode === "compact";
 
   return (
     <div className="relative overflow-hidden rounded-xl touch-pan-y">
-      {/* swipe-delete background — opacity tracks drag */}
-      <motion.div
-        style={{ opacity: bgOpacity }}
-        className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none"
-      >
-        <motion.div style={{ scale: iconScale }}>
-          <Trash2 className="text-destructive-foreground w-5 h-5" />
+      {swipeDelete && (
+        <motion.div
+          style={{ opacity: bgOpacity }}
+          className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none"
+        >
+          <motion.div style={{ scale: iconScale }}>
+            <Trash2 className="text-destructive-foreground w-5 h-5" />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
       <motion.div
-        drag="x"
-        dragDirectionLock
-        dragConstraints={{ left: -200, right: 0 }}
-        dragElastic={{ left: 0.2, right: 0 }}
-        style={{ x }}
-        onDragEnd={onDragEnd}
+        {...(swipeDelete
+          ? {
+              drag: "x" as const,
+              dragDirectionLock: true,
+              dragConstraints: { left: -200, right: 0 },
+              dragElastic: { left: 0.2, right: 0 },
+              style: { x },
+              onDragEnd,
+            }
+          : {})}
         className={`relative bg-card border border-border/60 rounded-xl shadow-card p-3 ${selected ? "ring-2 ring-primary" : ""} ${compact ? "p-2" : ""}`}
       >
         <div className="flex items-start gap-2">
@@ -196,6 +205,18 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
               <Star className={`w-4 h-4 ${item.pinned ? "fill-yellow-400 text-yellow-400" : ""}`} />
             </Button>
 
+            {!swipeDelete && (
+              <Button
+                size="icon" variant="ghost"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={confirmDelete}
+                title="Delete"
+                aria-label={`Delete ${item.uid}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="icon" variant="ghost" className="h-8 w-8">
@@ -231,7 +252,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 ))}
                 <DropdownMenuItem onClick={() => setTag(null)}>Clear tag</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                <DropdownMenuItem className="text-destructive" onClick={confirmDelete}>
                   <Trash2 className="w-4 h-4 mr-2" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
