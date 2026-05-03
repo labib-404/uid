@@ -2,11 +2,12 @@ import { useSettings } from "@/hooks/useSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Sun, Moon, LogOut, User } from "lucide-react";
+import { Sun, Moon, LogOut, User, Hand } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 
 export default function SettingsPage() {
-  const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme } = useSettings();
+  const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme, swipeDelete, setSwipeDelete } = useSettings();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
 
@@ -79,6 +80,24 @@ export default function SettingsPage() {
             Compact
           </Button>
         </div>
+      </div>
+
+      <div className="glass rounded-xl p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="swipe-toggle" className="flex items-center gap-2">
+            <Hand className="w-4 h-4" /> Swipe to delete
+          </Label>
+          <Switch
+            id="swipe-toggle"
+            checked={swipeDelete}
+            onCheckedChange={setSwipeDelete}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {swipeDelete
+            ? "Swipe an item left to delete it."
+            : "A delete button will appear on each item instead of swipe gestures."}
+        </p>
       </div>
     </div>
   );
