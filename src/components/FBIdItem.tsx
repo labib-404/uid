@@ -33,7 +33,6 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
         alt={label}
         loading="lazy"
         referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         className="rounded-full shrink-0 object-cover border border-border"
         style={{ width: size, height: size }}
         onError={(e) => {
