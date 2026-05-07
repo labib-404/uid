@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { FBId } from "@/types/fbid";
 
 export default function NoteDialog({
@@ -16,11 +14,9 @@ export default function NoteDialog({
   const [val, setVal] = useState("");
   useEffect(() => setVal(item?.note ?? ""), [item]);
 
-  const save = async () => {
+  const save = () => {
     if (!item) return;
     const note = val.slice(0, 1000);
-    const { error } = await supabase.from("facebook_ids").update({ note }).eq("id", item.id);
-    if (error) return toast.error(error.message);
     onSaved({ ...item, note });
     onClose();
   };
