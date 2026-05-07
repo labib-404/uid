@@ -15,6 +15,7 @@ export type FBId = {
   nationality?: string | null;
   instagram_username?: string | null;
   profile_fetched_at?: string | null;
+  instagram_checking?: boolean;
 };
 
 export const TAGS = ["VIP", "Hot", "New", "Done", "Skip"] as const;
