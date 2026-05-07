@@ -210,7 +210,9 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
             )}
             {!compact && item.password && (
               <div className="text-xs text-muted-foreground font-mono mt-1 flex items-center gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/40">••••••••</span>
+                <span className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/40 truncate max-w-[140px]">
+                  {item.password}
+                </span>
                 <button
                   onClick={() => copy(item.password!, "Password")}
                   className="hover:text-foreground flex items-center gap-1"
