@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useFBIds, genId } from "@/hooks/useFBIds";
+import { useFBProfile } from "@/hooks/useFBProfile";
 import { FBId } from "@/types/fbid";
 
 export default function Import() {
   const nav = useNavigate();
   const { items, setItems } = useFBIds();
+  const { fetchProfiles } = useFBProfile(setItems);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -57,6 +59,14 @@ export default function Import() {
     toast.success(`Imported ${newItems.length} (${parsed.length - fresh.length} duplicates skipped)`);
     setText("");
     nav("/");
+
+    // Auto-fetch profiles in background, in chunks of 20
+    (async () => {
+      const uids = newItems.map((i) => i.uid);
+      for (let i = 0; i < uids.length; i += 20) {
+        await fetchProfiles(uids.slice(i, i + 20));
+      }
+    })();
   };
 
   return (
