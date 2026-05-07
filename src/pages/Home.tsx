@@ -376,8 +376,9 @@ type RowProps = {
   onDelete: (item: FBId) => void;
   onOpenNote: (item: FBId) => void;
   onFetchProfile: (uid: string) => void;
+  onRecheckInstagram: (item: FBId) => void;
 };
-const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: RowProps) {
+const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile, onRecheckInstagram }: RowProps) {
   return (
     <FBIdItem
       item={item}
@@ -387,6 +388,7 @@ const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDele
       onDelete={() => onDelete(item)}
       onOpenNote={() => onOpenNote(item)}
       onFetchProfile={() => onFetchProfile(item.uid)}
+      onRecheckInstagram={() => onRecheckInstagram(item)}
     />
   );
 });
