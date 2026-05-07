@@ -11,11 +11,21 @@ type ProfileResult = {
   nationality?: string | null;
   photoUrl?: string | null;
   instagramUsername?: string | null;
+  instagramRateLimited?: boolean;
   error?: string;
 };
 
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
+  const [igProgress, setIgProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+
+  const bumpStart = (n: number) =>
+    setIgProgress((p) => ({ done: p.done, total: p.total + n }));
+  const bumpEnd = (n: number) =>
+    setIgProgress((p) => {
+      const next = { done: p.done + n, total: p.total };
+      return next.done >= next.total ? { done: 0, total: 0 } : next;
+    });
 
   const fetchProfiles = useCallback(
     async (uids: string[]) => {
@@ -23,7 +33,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       if (!list.length) return;
       setLoading(true);
       const listSet = new Set(list);
-      // Mark items as IG-checking so the card can show a loading state
+      bumpStart(list.length);
       setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: true } : p)));
       try {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
@@ -46,8 +56,9 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               photo_url: r.photoUrl || p.photo_url || null,
               follower_count: r.followerCount ?? p.follower_count ?? null,
               nationality: r.nationality ?? p.nationality ?? null,
-              // Trust the server's verification result (null means not on IG)
               instagram_username: r.instagramUsername ?? null,
+              instagram_rate_limited: !!r.instagramRateLimited,
+              instagram_checked_at: new Date().toISOString(),
               instagram_checking: false,
               profile_fetched_at: new Date().toISOString(),
             };
@@ -59,11 +70,58 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         toast.error(e?.message ?? "Fetch failed");
         setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
       } finally {
+        bumpEnd(list.length);
         setLoading(false);
       }
     },
     [setItems]
   );
 
-  return { fetchProfiles, loading };
+  const recheckInstagram = useCallback(
+    async (
+      items: { uid: string; username?: string | null; instagram_username?: string | null }[],
+      force = true
+    ) => {
+      const list = items.slice(0, 20);
+      if (!list.length) return;
+      const listSet = new Set(list.map((i) => i.uid));
+      const igCandidates: Record<string, string[]> = {};
+      for (const it of list) {
+        igCandidates[it.uid] = [it.instagram_username, it.username].filter((v): v is string => !!v);
+      }
+      bumpStart(list.length);
+      setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: true } : p)));
+      try {
+        const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
+          body: { uids: list.map((i) => i.uid), igOnly: true, igCandidates, force },
+        });
+        if (error) throw error;
+        const results = (data?.results ?? {}) as Record<string, ProfileResult>;
+        let rateCount = 0;
+        setItems((prev) =>
+          prev.map((p) => {
+            const r = results[p.uid];
+            if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false } : p;
+            if (r.instagramRateLimited) rateCount++;
+            return {
+              ...p,
+              instagram_username: r.instagramUsername ?? null,
+              instagram_rate_limited: !!r.instagramRateLimited,
+              instagram_checked_at: new Date().toISOString(),
+              instagram_checking: false,
+            };
+          })
+        );
+        if (rateCount) toast.error(`Instagram rate-limited on ${rateCount}`);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Re-check failed");
+        setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
+      } finally {
+        bumpEnd(list.length);
+      }
+    },
+    [setItems]
+  );
+
+  return { fetchProfiles, recheckInstagram, loading, igProgress };
 }

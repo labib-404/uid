@@ -30,6 +30,7 @@ interface Props {
   onDelete: () => void;
   onOpenNote: () => void;
   onFetchProfile?: () => void;
+  onRecheckInstagram?: () => void;
 }
 
 function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?: string | null; username?: string | null; photo?: string | null; size?: number }) {
@@ -103,7 +104,7 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
   );
 }
 
-function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: Props) {
+function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile, onRecheckInstagram }: Props) {
   const { viewMode, swipeDelete } = useSettings();
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
@@ -202,7 +203,24 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                   >
                     <Instagram className="w-3 h-3" />
                   </a>
+                ) : item.instagram_rate_limited ? (
+                  <button
+                    onClick={onRecheckInstagram}
+                    title="Instagram rate-limited — tap to retry"
+                    className="shrink-0 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                  >
+                    <Instagram className="w-2.5 h-2.5" /> Limited
+                  </button>
                 ) : null}
+                {onRecheckInstagram && !item.instagram_checking && (item.instagram_username || item.instagram_rate_limited) && (
+                  <button
+                    onClick={onRecheckInstagram}
+                    title="Re-check Instagram"
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
