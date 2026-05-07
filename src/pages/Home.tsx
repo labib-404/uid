@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -57,14 +57,20 @@ export default function Home() {
 
   const visible = filtered.slice(0, visibleCount);
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const onScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-        setVisibleCount((c) => Math.min(c + 50, filtered.length));
-      }
-    };
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => Math.min(c + 50, filtered.length));
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, [filtered.length]);
 
   const toggleSel = (id: string) => {
@@ -262,27 +268,19 @@ export default function Home() {
         </div>
       ) : (
         <div className={viewMode === "compact" ? "grid grid-cols-1 sm:grid-cols-2 gap-2" : "space-y-2"}>
-          <AnimatePresence initial={false}>
-            {visible.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-              >
-                <FBIdItem
-                  item={item}
-                  selected={selected.has(item.id)}
-                  onToggleSelect={() => toggleSel(item.id)}
-                  onChange={updateLocal}
-                  onDelete={() => deleteOne(item)}
-                  onOpenNote={() => setNoteFor(item)}
-                  onFetchProfile={() => fetchOne(item.uid)}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+          {visible.map((item) => (
+            <FBIdItem
+              key={item.id}
+              item={item}
+              selected={selected.has(item.id)}
+              onToggleSelect={() => toggleSel(item.id)}
+              onChange={updateLocal}
+              onDelete={() => deleteOne(item)}
+              onOpenNote={() => setNoteFor(item)}
+              onFetchProfile={() => fetchOne(item.uid)}
+            />
+          ))}
+          <div ref={sentinelRef} />
           {visibleCount < filtered.length && (
             <div className="text-center py-4 text-xs text-muted-foreground">Loading more…</div>
           )}
