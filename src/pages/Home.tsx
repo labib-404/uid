@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
+import { Search, Trash2, Check, Star, Copy, Download, X } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
 import { useSettings } from "@/hooks/useSettings";
 import FBIdItem from "@/components/FBIdItem";
@@ -8,21 +8,16 @@ import NoteDialog from "@/components/NoteDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FBId } from "@/types/fbid";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type Filter = "all" | "checked" | "unchecked" | "saved" | "noted" | "tagged";
 type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 
 export default function Home() {
-  const { items, setItems, loading, refresh } = useFBIds();
+  const { items, setItems, loading } = useFBIds();
   const { viewMode } = useSettings();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -60,7 +55,6 @@ export default function Home() {
 
   const visible = filtered.slice(0, visibleCount);
 
-  // infinite scroll
   useEffect(() => {
     const onScroll = () => {
       if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
@@ -82,69 +76,29 @@ export default function Home() {
     setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)));
   };
 
-  const deleteOne = async (item: FBId) => {
+  const deleteOne = (item: FBId) => {
     setItems((prev) => prev.filter((p) => p.id !== item.id));
-    const { error } = await supabase.from("facebook_ids").delete().eq("id", item.id);
-    if (error) {
-      toast.error("Delete failed");
-      refresh();
-      return;
-    }
     toast("Deleted", {
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          const { error: e2 } = await supabase.from("facebook_ids").insert({
-            id: item.id, user_id: item.user_id, uid: item.uid, password: item.password,
-            pinned: item.pinned, visited: item.visited, note: item.note, tag: item.tag,
-            visited_at: item.visited_at, created_at: item.created_at,
-          });
-          if (e2) return toast.error("Undo failed");
-          refresh();
-        },
-      },
-      duration: 6000,
+      action: { label: "Undo", onClick: () => setItems((prev) => [item, ...prev]) },
+      duration: 5000,
     });
   };
 
-  const bulkUpdate = async (patch: Partial<FBId>) => {
+  const bulkUpdate = (patch: Partial<FBId>) => {
     if (!selected.size) return;
-    const ids = Array.from(selected);
-    const { error } = await supabase.from("facebook_ids").update(patch).in("id", ids);
-    if (error) return toast.error(error.message);
     setItems((prev) => prev.map((p) => (selected.has(p.id) ? { ...p, ...patch } : p)));
-    toast.success(`Updated ${ids.length} item(s)`);
+    toast.success(`Updated ${selected.size} item(s)`);
     clearSel();
   };
 
-  const bulkDelete = async () => {
+  const bulkDelete = () => {
     if (!selected.size) return;
-    const ids = Array.from(selected);
     const removed = items.filter((p) => selected.has(p.id));
     setItems((prev) => prev.filter((p) => !selected.has(p.id)));
-    const { error } = await supabase.from("facebook_ids").delete().in("id", ids);
-    if (error) {
-      toast.error("Delete failed");
-      refresh();
-      return;
-    }
     clearSel();
-    toast(`Deleted ${ids.length}`, {
-      duration: 6000,
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          const { error: e2 } = await supabase.from("facebook_ids").insert(
-            removed.map((r) => ({
-              id: r.id, user_id: r.user_id, uid: r.uid, password: r.password,
-              pinned: r.pinned, visited: r.visited, note: r.note, tag: r.tag,
-              visited_at: r.visited_at, created_at: r.created_at,
-            }))
-          );
-          if (e2) return toast.error("Undo failed");
-          refresh();
-        },
-      },
+    toast(`Deleted ${removed.length}`, {
+      duration: 5000,
+      action: { label: "Undo", onClick: () => setItems((prev) => [...removed, ...prev]) },
     });
   };
 
@@ -155,42 +109,6 @@ export default function Home() {
     ).join("\n");
     navigator.clipboard.writeText(text);
     toast.success(`Copied ${sel.length}`);
-  };
-
-  const bulkFetchProfiles = async () => {
-    if (!selected.size) return;
-    const sel = items.filter((i) => selected.has(i.id));
-    const uids = sel.map((s) => s.uid);
-    toast.info(`Fetching ${uids.length} profile(s)…`);
-    // chunk to 20
-    const chunks: string[][] = [];
-    for (let i = 0; i < uids.length; i += 20) chunks.push(uids.slice(i, i + 20));
-    for (const chunk of chunks) {
-      const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
-        body: { uids: chunk },
-      });
-      if (error) {
-        toast.error(error.message);
-        continue;
-      }
-      const results = data?.results ?? {};
-      setItems((prev) => prev.map((p) => {
-        const r = results[p.uid];
-        if (!r || r.error) return p;
-        return {
-          ...p,
-          real_name: r.name,
-          username: r.username,
-          photo_url: r.photoUrl,
-          follower_count: r.followerCount,
-          nationality: r.nationality,
-          instagram_username: r.instagramUsername,
-          profile_fetched_at: new Date().toISOString(),
-        };
-      }));
-    }
-    toast.success("Profiles updated");
-    clearSel();
   };
 
   const exportFile = (kind: "txt" | "csv", scope: "all" | "checked" | "unchecked" | "saved") => {
@@ -213,37 +131,36 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const stats = [
+    { label: "Total", val: items.length, color: "text-foreground" },
+    { label: "Checked", val: items.filter((i) => i.visited).length, color: "text-emerald-400" },
+    { label: "Left", val: items.filter((i) => !i.visited).length, color: "text-blue-400" },
+    { label: "Saved", val: items.filter((i) => i.pinned).length, color: "text-amber-400" },
+  ];
+
   return (
     <div className="space-y-3">
-      {/* stats */}
       <div className="grid grid-cols-4 gap-2">
-        {[
-          { label: "Total", val: items.length },
-          { label: "Checked", val: items.filter((i) => i.visited).length },
-          { label: "Left", val: items.filter((i) => !i.visited).length },
-          { label: "Saved", val: items.filter((i) => i.pinned).length },
-        ].map((s) => (
-          <div key={s.label} className="glass rounded-xl p-2 text-center">
-            <div className="text-lg font-bold text-gradient">{s.val}</div>
-            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+        {stats.map((s) => (
+          <div key={s.label} className="glass rounded-xl p-2.5 text-center">
+            <div className={`text-lg font-bold ${s.color}`}>{s.val}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search UID or note…"
-          className="pl-10"
+          className="pl-10 bg-card border-border/60"
         />
       </div>
 
-      {/* filters + sort */}
       <div className="flex gap-2 items-center">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="flex-1 overflow-x-auto">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="flex-1 overflow-x-auto no-scrollbar">
           <TabsList className="w-max">
             {(["all", "checked", "unchecked", "saved", "noted", "tagged"] as Filter[]).map((f) => (
               <TabsTrigger key={f} value={f} className="capitalize text-xs">{f}</TabsTrigger>
@@ -262,14 +179,13 @@ export default function Home() {
         </Select>
       </div>
 
-      {/* bulk bar */}
       <AnimatePresence>
         {selected.size > 0 && (
           <motion.div
             initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
             className="glass rounded-xl p-2 flex items-center gap-1 flex-wrap sticky top-14 z-20"
           >
-            <span className="text-sm font-medium px-2">{selected.size}</span>
+            <span className="text-sm font-bold px-2 text-primary">{selected.size}</span>
             <Button size="sm" variant="ghost" onClick={() => bulkUpdate({ visited: true, visited_at: new Date().toISOString() })}>
               <Check className="w-4 h-4 mr-1" /> Check
             </Button>
@@ -278,9 +194,6 @@ export default function Home() {
             </Button>
             <Button size="sm" variant="ghost" onClick={() => bulkUpdate({ pinned: true })}>
               <Star className="w-4 h-4 mr-1" /> Save
-            </Button>
-            <Button size="sm" variant="ghost" onClick={bulkFetchProfiles}>
-              <RefreshCw className="w-4 h-4 mr-1" /> Fetch
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -302,7 +215,6 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* export */}
       <div className="flex justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -319,15 +231,15 @@ export default function Home() {
         </DropdownMenu>
       </div>
 
-      {/* list */}
       {loading ? (
         <div className="text-center py-10 text-muted-foreground">Loading…</div>
       ) : visible.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
-          No items. <a href="/import" className="text-primary underline">Import some UIDs</a>.
+        <div className="text-center py-16 text-muted-foreground">
+          <p className="mb-2">No items yet.</p>
+          <a href="/import" className="text-primary underline underline-offset-4">Import some UIDs →</a>
         </div>
       ) : (
-        <div className={viewMode === "compact" ? "grid grid-cols-2 gap-2" : "space-y-2"}>
+        <div className={viewMode === "compact" ? "grid grid-cols-1 sm:grid-cols-2 gap-2" : "space-y-2"}>
           <AnimatePresence initial={false}>
             {visible.map((item) => (
               <motion.div

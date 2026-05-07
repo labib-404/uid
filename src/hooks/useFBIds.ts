@@ -1,30 +1,48 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { FBId } from "@/types/fbid";
-import { useAuth } from "./useAuth";
+
+const STORAGE_KEY = "fb_ids_v1";
+
+function load(): FBId[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+let memCache: FBId[] | null = null;
+const listeners = new Set<(items: FBId[]) => void>();
+
+function persist(items: FBId[]) {
+  memCache = items;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  listeners.forEach((l) => l(items));
+}
 
 export function useFBIds() {
-  const { user } = useAuth();
-  const [items, setItems] = useState<FBId[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchAll = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("facebook_ids")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5000);
-    if (!error && data) setItems(data as FBId[]);
-    setLoading(false);
-  }, [user]);
+  const [items, setItemsState] = useState<FBId[]>(() => memCache ?? (memCache = load()));
+  const [loading] = useState(false);
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    const l = (next: FBId[]) => setItemsState(next);
+    listeners.add(l);
+    return () => { listeners.delete(l); };
+  }, []);
 
-  const refresh = fetchAll;
+  const setItems = useCallback((updater: FBId[] | ((prev: FBId[]) => FBId[])) => {
+    const next = typeof updater === "function" ? (updater as (p: FBId[]) => FBId[])(memCache ?? []) : updater;
+    persist(next);
+  }, []);
+
+  const refresh = useCallback(() => { persist(load()); }, []);
 
   return { items, setItems, loading, refresh };
+}
+
+export function genId() {
+  return (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
 }

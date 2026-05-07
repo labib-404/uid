@@ -1,23 +1,22 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useFBIds, genId } from "@/hooks/useFBIds";
+import { FBId } from "@/types/fbid";
 
 export default function Import() {
-  const { user } = useAuth();
   const nav = useNavigate();
+  const { items, setItems } = useFBIds();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
   const lineCount = text.split("\n").filter((l) => l.trim()).length;
 
-  const submit = async () => {
-    if (!user) return;
+  const submit = () => {
     if (!text.trim()) return toast.error("Paste some UIDs first");
     setBusy(true);
 
@@ -27,10 +26,7 @@ export default function Import() {
       return { uid, password: password || null };
     }).filter((p) => p.uid && p.uid.length <= 255);
 
-    // dedup against existing
-    const { data: existing } = await supabase
-      .from("facebook_ids").select("uid").eq("user_id", user.id).limit(10000);
-    const have = new Set((existing ?? []).map((e) => e.uid));
+    const have = new Set(items.map((i) => i.uid));
     const seen = new Set<string>();
     const fresh = parsed.filter((p) => {
       if (have.has(p.uid) || seen.has(p.uid)) return false;
@@ -43,54 +39,61 @@ export default function Import() {
       return toast.info("All UIDs already exist");
     }
 
-    // chunk inserts
-    const chunks: typeof fresh[] = [];
-    for (let i = 0; i < fresh.length; i += 500) chunks.push(fresh.slice(i, i + 500));
-    let inserted = 0;
-    for (const c of chunks) {
-      const { error } = await supabase.from("facebook_ids").insert(
-        c.map((r) => ({ user_id: user.id, uid: r.uid, password: r.password }))
-      );
-      if (error) {
-        toast.error(error.message);
-        break;
-      }
-      inserted += c.length;
-    }
+    const now = new Date().toISOString();
+    const newItems: FBId[] = fresh.map((p) => ({
+      id: genId(),
+      uid: p.uid,
+      password: p.password,
+      pinned: false,
+      visited: false,
+      note: null,
+      tag: null,
+      visited_at: null,
+      created_at: now,
+    }));
+
+    setItems([...newItems, ...items]);
     setBusy(false);
-    toast.success(`Imported ${inserted} (${parsed.length - fresh.length} duplicates skipped)`);
+    toast.success(`Imported ${newItems.length} (${parsed.length - fresh.length} duplicates skipped)`);
     setText("");
     nav("/");
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
       <div>
-        <h1 className="text-2xl font-bold text-gradient flex items-center gap-2">
-          <Upload className="w-6 h-6" /> Bulk Import
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Upload className="w-6 h-6 text-primary" /> Bulk Import
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          One per line. Format: <code className="text-foreground">uid</code> or <code className="text-foreground">uid|password</code>
+          One per line. Format: <code className="text-foreground bg-secondary px-1.5 py-0.5 rounded text-xs">uid</code> or <code className="text-foreground bg-secondary px-1.5 py-0.5 rounded text-xs">uid|password</code>
         </p>
       </div>
 
-      <Textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={12}
-        placeholder={"100012345\n100098765|mypassword\n…"}
-        className="font-mono text-sm"
-      />
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <FileText className="w-3 h-3" /> {lineCount} line(s)
-        </span>
-        <Button onClick={submit} disabled={busy} className="bg-gradient-primary text-primary-foreground shadow-glow">
-          {busy ? "Importing…" : "Import"}
-        </Button>
+      <div className="glass rounded-2xl p-3">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={14}
+          placeholder={"100012345\n100098765|mypassword\n…"}
+          className="font-mono text-sm bg-background/60 border-border/60 resize-none"
+        />
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" /> {lineCount} line{lineCount === 1 ? "" : "s"}
+          </span>
+          <Button
+            onClick={submit}
+            disabled={busy || lineCount === 0}
+            className="bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-90"
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            {busy ? "Importing…" : "Import"}
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
