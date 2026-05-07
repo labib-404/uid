@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
   Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users,
@@ -103,7 +103,7 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
   );
 }
 
-export default function FBIdItem({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: Props) {
+function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: Props) {
   const { viewMode, swipeDelete } = useSettings();
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
@@ -284,3 +284,13 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
     </div>
   );
 }
+
+export default memo(FBIdItemBase, (a, b) =>
+  a.item === b.item &&
+  a.selected === b.selected &&
+  a.onToggleSelect === b.onToggleSelect &&
+  a.onChange === b.onChange &&
+  a.onDelete === b.onDelete &&
+  a.onOpenNote === b.onOpenNote &&
+  a.onFetchProfile === b.onFetchProfile
+);
