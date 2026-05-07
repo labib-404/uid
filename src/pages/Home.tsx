@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -22,6 +22,11 @@ export default function Home() {
   const { fetchProfiles, loading: fetching } = useFBProfile(setItems);
   const { viewMode } = useSettings();
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 180);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -88,16 +93,18 @@ export default function Home() {
     return () => io.disconnect();
   }, [filtered.length]);
 
-  const toggleSel = (id: string) => {
-    const s = new Set(selected);
-    s.has(id) ? s.delete(id) : s.add(id);
-    setSelected(s);
-  };
-  const clearSel = () => setSelected(new Set());
+  const toggleSel = useCallback((id: string) => {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }, []);
+  const clearSel = useCallback(() => setSelected(new Set()), []);
 
-  const updateLocal = (next: FBId) => {
+  const updateLocal = useCallback((next: FBId) => {
     setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)));
-  };
+  }, [setItems]);
 
   const deleteOne = (item: FBId) => {
     setItems((prev) => prev.filter((p) => p.id !== item.id));
