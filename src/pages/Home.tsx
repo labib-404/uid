@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Check, Star, Copy, Download, X } from "lucide-react";
+import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
+import { useFBProfile } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
 import FBIdItem from "@/components/FBIdItem";
 import NoteDialog from "@/components/NoteDialog";
@@ -18,6 +19,7 @@ type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 
 export default function Home() {
   const { items, setItems, loading } = useFBIds();
+  const { fetchProfiles, loading: fetching } = useFBProfile(setItems);
   const { viewMode } = useSettings();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -110,6 +112,20 @@ export default function Home() {
     navigator.clipboard.writeText(text);
     toast.success(`Copied ${sel.length}`);
   };
+
+  const bulkFetch = () => {
+    const sel = items.filter((i) => selected.has(i.id));
+    fetchProfiles(sel.map((i) => i.uid));
+    clearSel();
+  };
+
+  const fetchMissing = () => {
+    const missing = items.filter((i) => !i.real_name && !i.photo_url).map((i) => i.uid);
+    if (!missing.length) { toast("All profiles already fetched"); return; }
+    fetchProfiles(missing);
+  };
+
+  const fetchOne = (uid: string) => fetchProfiles([uid]);
 
   const exportFile = (kind: "txt" | "csv", scope: "all" | "checked" | "unchecked" | "saved") => {
     let data = items;
@@ -208,6 +224,9 @@ export default function Home() {
             <Button size="sm" variant="ghost" className="text-destructive" onClick={bulkDelete}>
               <Trash2 className="w-4 h-4 mr-1" /> Delete
             </Button>
+            <Button size="sm" variant="ghost" onClick={bulkFetch} disabled={fetching}>
+              <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Fetch
+            </Button>
             <Button size="sm" variant="ghost" onClick={clearSel} className="ml-auto">
               <X className="w-4 h-4" />
             </Button>
@@ -215,7 +234,10 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={fetchMissing} disabled={fetching}>
+          <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Fetch missing
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-1" /> Export</Button>
@@ -256,6 +278,7 @@ export default function Home() {
                   onChange={updateLocal}
                   onDelete={() => deleteOne(item)}
                   onOpenNote={() => setNoteFor(item)}
+                  onFetchProfile={() => fetchOne(item.uid)}
                 />
               </motion.div>
             ))}
