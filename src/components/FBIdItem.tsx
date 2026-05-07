@@ -37,7 +37,14 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
         className="rounded-full shrink-0 object-cover border border-border"
         style={{ width: size, height: size }}
         onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
+          const img = e.currentTarget as HTMLImageElement & { dataset: DOMStringMap };
+          if (!img.dataset.retried) {
+            img.dataset.retried = "1";
+            const sep = photo.includes("?") ? "&" : "?";
+            img.src = `${photo}${sep}_r=${Date.now()}`;
+            return;
+          }
+          img.style.display = "none";
           const hue = uid.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
           const grad = `linear-gradient(135deg, hsl(${hue},35%,38%), hsl(${(hue + 40) % 360},40%,48%))`;
           const initialsSrc = name?.trim() || username || uid;
