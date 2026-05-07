@@ -106,13 +106,13 @@ export default function Home() {
     setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)));
   }, [setItems]);
 
-  const deleteOne = (item: FBId) => {
+  const deleteOne = useCallback((item: FBId) => {
     setItems((prev) => prev.filter((p) => p.id !== item.id));
     toast("Deleted", {
       action: { label: "Undo", onClick: () => setItems((prev) => [item, ...prev]) },
       duration: 5000,
     });
-  };
+  }, [setItems]);
 
   const bulkUpdate = (patch: Partial<FBId>) => {
     if (!selected.size) return;
@@ -153,7 +153,7 @@ export default function Home() {
     fetchProfiles(missing);
   };
 
-  const fetchOne = (uid: string) => fetchProfiles([uid]);
+  const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
 
   const exportFile = (kind: "txt" | "csv", scope: "all" | "checked" | "unchecked" | "saved") => {
     let data = items;
@@ -175,12 +175,12 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: "Total", val: items.length, color: "text-foreground" },
     { label: "Checked", val: items.filter((i) => i.visited).length, color: "text-emerald-400" },
     { label: "Left", val: items.filter((i) => !i.visited).length, color: "text-blue-400" },
     { label: "Saved", val: items.filter((i) => i.pinned).length, color: "text-amber-400" },
-  ];
+  ], [items]);
 
   return (
     <div className="space-y-3">
@@ -196,8 +196,8 @@ export default function Home() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search UID or note…"
           className="pl-10 bg-card border-border/60"
         />
