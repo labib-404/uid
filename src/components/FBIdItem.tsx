@@ -151,38 +151,43 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
           : {})}
         className={`relative bg-card border rounded-xl shadow-card transition-colors ${selected ? "border-primary ring-1 ring-primary/40" : "border-border/60"} ${compact ? "p-2" : "p-3"}`}
       >
-        <div className="flex items-start gap-2.5">
-          <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1.5" />
+        <div className="flex items-start gap-3">
+          <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-2" />
 
-          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 32 : 40} />
+          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 52 : 64} />
 
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 space-y-1.5">
             {item.real_name && (
               <div className="flex items-center gap-1.5">
-                <div className="text-sm font-semibold truncate">{item.real_name}</div>
-                {item.username && (
-                  <span className="text-[11px] text-muted-foreground truncate shrink-0">@{item.username}</span>
-                )}
+                <div className="text-[13px] font-semibold truncate">{item.real_name}</div>
                 {item.follower_count && (
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 shrink-0">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0">
                     <Users className="w-3 h-3" /> {item.follower_count}
                   </span>
                 )}
                 <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0 ml-auto" title="Copy name">
-                  <Copy className="w-3 h-3" />
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            {item.username && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-muted-foreground truncate">@{item.username}</span>
+                <button onClick={() => copy(item.username!, "Username")} className="text-muted-foreground hover:text-foreground shrink-0" title="Copy username">
+                  <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={openLink}
-                className={`text-sm truncate hover:underline flex items-center gap-1 font-mono ${item.visited ? "text-muted-foreground line-through" : "text-foreground"}`}
+                className={`text-[15px] truncate hover:underline flex items-center gap-1 font-mono ${item.visited ? "text-muted-foreground line-through" : "text-foreground"}`}
               >
                 {item.uid}
-                <ExternalLink className="w-3 h-3 opacity-60" />
+                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
               </button>
               <button onClick={() => copy(item.uid, "UID")} className="text-muted-foreground hover:text-foreground" title="Copy UID">
-                <Copy className="w-3 h-3" />
+                <Copy className="w-3.5 h-3.5" />
               </button>
               {item.visited && <Check className="w-3.5 h-3.5" style={{ color: "hsl(var(--success))" }} />}
               {item.tag && (
@@ -192,15 +197,15 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
               )}
             </div>
             {!compact && item.password && (
-              <div className="text-xs text-muted-foreground font-mono mt-1.5 flex items-center gap-2 flex-wrap">
-                <span className="px-1.5 py-0.5 rounded bg-secondary border border-border/60 truncate max-w-[160px] text-foreground/80">
+              <div className="text-sm text-muted-foreground font-mono flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-secondary border border-border/60 truncate max-w-[180px] text-foreground/90">
                   {item.password}
                 </span>
                 <button onClick={() => copy(item.password!, "Password")} className="hover:text-foreground flex items-center gap-1" title="Copy password">
-                  <Copy className="w-3 h-3" /> Pass
+                  <Copy className="w-3.5 h-3.5" /> Pass
                 </button>
                 <button onClick={() => copy(`${item.uid}|${item.password}`, "UID|Pass")} className="hover:text-foreground flex items-center gap-1" title="Copy UID|Pass">
-                  <Copy className="w-3 h-3" /> UID|Pass
+                  <Copy className="w-3.5 h-3.5" /> UID|Pass
                 </button>
               </div>
             )}
