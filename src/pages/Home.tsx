@@ -5,7 +5,6 @@ import { useFBIds } from "@/hooks/useFBIds";
 import { useFBProfile } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
 import FBIdItem from "@/components/FBIdItem";
-import { memo } from "react";
 import NoteDialog from "@/components/NoteDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
