@@ -110,8 +110,8 @@ function parseProfile(html: string, uid: string) {
   let photoUrl: string | null = null;
   const ogImage = meta(html, "og:image");
   if (ogImage && /^https?:\/\//.test(ogImage)) photoUrl = ogImage;
-  // Prefer stable graph endpoint for numeric ids (og:image expires & blocks hotlink)
-  if (/^\d+$/.test(userId)) {
+  // Fallback to graph endpoint only if og:image is missing
+  if (!photoUrl && /^\d+$/.test(userId)) {
     photoUrl = `https://graph.facebook.com/${userId}/picture?type=large&width=200&height=200`;
   }
 
