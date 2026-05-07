@@ -164,8 +164,8 @@ export default function Home() {
     <div className="space-y-3">
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (
-          <div key={s.label} className="glass rounded-xl p-2.5 text-center">
-            <div className={`text-lg font-bold ${s.color}`}>{s.val}</div>
+          <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-colors hover:border-primary/40">
+            <div className={`text-lg font-bold tabular-nums ${s.color}`}>{s.val}</div>
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{s.label}</div>
           </div>
         ))}
