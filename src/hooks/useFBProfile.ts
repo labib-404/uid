@@ -22,6 +22,9 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       const list = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean))).slice(0, 20);
       if (!list.length) return;
       setLoading(true);
+      const listSet = new Set(list);
+      // Mark items as IG-checking so the card can show a loading state
+      setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: true } : p)));
       try {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
           body: { uids: list },
@@ -33,8 +36,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         setItems((prev) =>
           prev.map((p) => {
             const r = results[p.uid];
-            if (!r) return p;
-            if (r.error) { failCount++; return p; }
+            if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false } : p;
+            if (r.error) { failCount++; return { ...p, instagram_checking: false }; }
             okCount++;
             return {
               ...p,
@@ -43,7 +46,9 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               photo_url: r.photoUrl || p.photo_url || null,
               follower_count: r.followerCount ?? p.follower_count ?? null,
               nationality: r.nationality ?? p.nationality ?? null,
-              instagram_username: r.instagramUsername ?? p.instagram_username ?? null,
+              // Trust the server's verification result (null means not on IG)
+              instagram_username: r.instagramUsername ?? null,
+              instagram_checking: false,
               profile_fetched_at: new Date().toISOString(),
             };
           })
@@ -52,6 +57,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         if (failCount) toast.error(`${failCount} not found / rate limited`);
       } catch (e: any) {
         toast.error(e?.message ?? "Fetch failed");
+        setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
       } finally {
         setLoading(false);
       }

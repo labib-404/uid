@@ -183,7 +183,14 @@ async function checkInstagramExists(username: string): Promise<boolean> {
   const u = username.trim().replace(/^@/, "");
   if (!u || !/^[a-zA-Z0-9_.]{2,30}$/.test(u)) return false;
   if (IG_RESERVED.has(u.toLowerCase())) return false;
-  try {
+  const key = u.toLowerCase();
+  const now = Date.now();
+  const cached = IG_CACHE.get(key);
+  if (cached && now - cached.at < IG_TTL) return cached.exists;
+  const inflight = IG_INFLIGHT.get(key);
+  if (inflight) return inflight;
+  const p = (async () => {
+   try {
     const res = await fetch(`https://www.instagram.com/${u}/`, {
       headers: IG_HEADERS,
       redirect: "manual",
@@ -205,10 +212,23 @@ async function checkInstagramExists(username: string): Promise<boolean> {
       return false;
     }
     return false;
-  } catch {
-    return false;
+   } catch {
+     return false;
+   }
+  })();
+  IG_INFLIGHT.set(key, p);
+  try {
+    const exists = await p;
+    IG_CACHE.set(key, { exists, at: Date.now() });
+    return exists;
+  } finally {
+    IG_INFLIGHT.delete(key);
   }
 }
+
+const IG_TTL = 1000 * 60 * 60 * 12; // 12h
+const IG_CACHE = new Map<string, { exists: boolean; at: number }>();
+const IG_INFLIGHT = new Map<string, Promise<boolean>>();
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
