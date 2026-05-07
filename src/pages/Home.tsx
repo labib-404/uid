@@ -30,6 +30,21 @@ export default function Home() {
 
   useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
+  // Auto-fetch profiles for any items missing data (runs once per session per uid)
+  const autoFetchedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const missing = items
+      .filter((i) => !i.real_name && !i.photo_url && !autoFetchedRef.current.has(i.uid))
+      .map((i) => i.uid);
+    if (!missing.length) return;
+    missing.forEach((u) => autoFetchedRef.current.add(u));
+    (async () => {
+      for (let i = 0; i < missing.length; i += 20) {
+        await fetchProfiles(missing.slice(i, i + 20));
+      }
+    })();
+  }, [items, fetchProfiles]);
+
   const filtered = useMemo(() => {
     let out = items;
     if (search.trim()) {
