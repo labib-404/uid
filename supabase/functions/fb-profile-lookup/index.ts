@@ -137,6 +137,26 @@ function parseProfile(html: string, uid: string) {
   return { name, username, userId, followerCount, nationality, photoUrl, instagramUsername };
 }
 
+async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": FB_HEADERS["user-agent"], accept: "image/*" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "image/jpeg";
+    if (!ct.startsWith("image/")) return null;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length < 200 || buf.length > 600_000) return null;
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return `data:${ct};base64,${btoa(bin)}`;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -164,6 +184,10 @@ Deno.serve(async (req) => {
           return;
         }
         const data = parseProfile(html, cleanUid);
+        if (data.photoUrl) {
+          const dataUrl = await fetchPhotoAsDataUrl(data.photoUrl);
+          if (dataUrl) data.photoUrl = dataUrl;
+        }
         results[cleanUid] = data;
       })
     );
