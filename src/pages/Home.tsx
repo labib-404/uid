@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -22,6 +22,11 @@ export default function Home() {
   const { fetchProfiles, loading: fetching } = useFBProfile(setItems);
   const { viewMode } = useSettings();
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 180);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -88,24 +93,26 @@ export default function Home() {
     return () => io.disconnect();
   }, [filtered.length]);
 
-  const toggleSel = (id: string) => {
-    const s = new Set(selected);
-    s.has(id) ? s.delete(id) : s.add(id);
-    setSelected(s);
-  };
-  const clearSel = () => setSelected(new Set());
+  const toggleSel = useCallback((id: string) => {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }, []);
+  const clearSel = useCallback(() => setSelected(new Set()), []);
 
-  const updateLocal = (next: FBId) => {
+  const updateLocal = useCallback((next: FBId) => {
     setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)));
-  };
+  }, [setItems]);
 
-  const deleteOne = (item: FBId) => {
+  const deleteOne = useCallback((item: FBId) => {
     setItems((prev) => prev.filter((p) => p.id !== item.id));
     toast("Deleted", {
       action: { label: "Undo", onClick: () => setItems((prev) => [item, ...prev]) },
       duration: 5000,
     });
-  };
+  }, [setItems]);
 
   const bulkUpdate = (patch: Partial<FBId>) => {
     if (!selected.size) return;
@@ -146,7 +153,9 @@ export default function Home() {
     fetchProfiles(missing);
   };
 
-  const fetchOne = (uid: string) => fetchProfiles([uid]);
+  const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
+
+  const openNote = useCallback((item: FBId) => setNoteFor(item), []);
 
   const exportFile = (kind: "txt" | "csv", scope: "all" | "checked" | "unchecked" | "saved") => {
     let data = items;
@@ -168,12 +177,12 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const stats = [
+  const stats = useMemo(() => [
     { label: "Total", val: items.length, color: "text-foreground" },
     { label: "Checked", val: items.filter((i) => i.visited).length, color: "text-emerald-400" },
     { label: "Left", val: items.filter((i) => !i.visited).length, color: "text-blue-400" },
     { label: "Saved", val: items.filter((i) => i.pinned).length, color: "text-amber-400" },
-  ];
+  ], [items]);
 
   return (
     <div className="space-y-3">
@@ -189,8 +198,8 @@ export default function Home() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search UID or note…"
           className="pl-10 bg-card border-border/60"
         />
@@ -284,15 +293,15 @@ export default function Home() {
       ) : (
         <div className={viewMode === "compact" ? "grid grid-cols-1 sm:grid-cols-2 gap-2" : "space-y-2"}>
           {visible.map((item) => (
-            <FBIdItem
+            <Row
               key={item.id}
               item={item}
               selected={selected.has(item.id)}
-              onToggleSelect={() => toggleSel(item.id)}
+              onToggleSelect={toggleSel}
               onChange={updateLocal}
-              onDelete={() => deleteOne(item)}
-              onOpenNote={() => setNoteFor(item)}
-              onFetchProfile={() => fetchOne(item.uid)}
+              onDelete={deleteOne}
+              onOpenNote={openNote}
+              onFetchProfile={fetchOne}
             />
           ))}
           <div ref={sentinelRef} />
@@ -306,3 +315,26 @@ export default function Home() {
     </div>
   );
 }
+
+type RowProps = {
+  item: FBId;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  onChange: (next: FBId) => void;
+  onDelete: (item: FBId) => void;
+  onOpenNote: (item: FBId) => void;
+  onFetchProfile: (uid: string) => void;
+};
+const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: RowProps) {
+  return (
+    <FBIdItem
+      item={item}
+      selected={selected}
+      onToggleSelect={() => onToggleSelect(item.id)}
+      onChange={onChange}
+      onDelete={() => onDelete(item)}
+      onOpenNote={() => onOpenNote(item)}
+      onFetchProfile={() => onFetchProfile(item.uid)}
+    />
+  );
+});
