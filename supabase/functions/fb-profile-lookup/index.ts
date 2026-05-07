@@ -59,13 +59,24 @@ function meta(html: string, prop: string): string | null {
     "i"
   );
   const m = html.match(re);
-  if (m) return m[1];
+  if (m) return decodeEntities(m[1]);
   const re2 = new RegExp(
     `<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${prop}["']`,
     "i"
   );
   const m2 = html.match(re2);
-  return m2 ? m2[1] : null;
+  return m2 ? decodeEntities(m2[1]) : null;
+}
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
 }
 
 function parseProfile(html: string, uid: string) {

@@ -40,7 +40,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               ...p,
               real_name: r.name ?? p.real_name ?? null,
               username: r.username ?? p.username ?? null,
-              photo_url: r.photoUrl ?? p.photo_url ?? null,
+              photo_url: r.photoUrl || p.photo_url || null,
               follower_count: r.followerCount ?? p.follower_count ?? null,
               nationality: r.nationality ?? p.nationality ?? null,
               instagram_username: r.instagramUsername ?? p.instagram_username ?? null,
