@@ -34,7 +34,10 @@ function Avatar({ uid, name, photo, size = 40 }: { uid: string; name: string | n
         crossOrigin="anonymous"
         className="rounded-full shrink-0 object-cover border border-border"
         style={{ width: size, height: size }}
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+          toast.error(`Pic load failed: ${name ?? uid}`);
+        }}
       />
     );
   }
