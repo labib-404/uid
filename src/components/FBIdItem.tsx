@@ -23,12 +23,14 @@ interface Props {
   onFetchProfile?: () => void;
 }
 
-function Avatar({ uid, name, photo, size = 40 }: { uid: string; name: string | null | undefined; photo?: string | null; size?: number }) {
+function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?: string | null; username?: string | null; photo?: string | null; size?: number }) {
+  const label = name?.trim() || (username ? `@${username}` : "") || uid || "Unknown user";
+  const hasIdentity = Boolean(name?.trim() || username);
   if (photo) {
     return (
       <img
         src={photo}
-        alt={name ?? uid}
+        alt={label}
         loading="lazy"
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
@@ -36,16 +38,23 @@ function Avatar({ uid, name, photo, size = 40 }: { uid: string; name: string | n
         style={{ width: size, height: size }}
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
-          toast.error(`Pic load failed: ${name ?? uid}`);
+          toast.error("Profile picture failed to load", {
+            description: hasIdentity ? `${label} · UID ${uid}` : `Unknown user · UID ${uid}`,
+          });
         }}
       />
     );
   }
-  const initials = (name ?? uid).slice(0, 2).toUpperCase();
+  const initialsSource = name?.trim() || username || uid;
+  const initials = hasIdentity
+    ? initialsSource.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?"
+    : "?";
   const hue = uid.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   const grad = `linear-gradient(135deg, hsl(${hue},35%,38%), hsl(${(hue + 40) % 360},40%,48%))`;
   return (
     <div
+      title={label}
+      aria-label={label}
       className="rounded-full shrink-0 flex items-center justify-center text-white font-semibold border border-border"
       style={{ width: size, height: size, background: grad, fontSize: size * 0.36 }}
     >
@@ -114,7 +123,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         <div className="flex items-start gap-2.5">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1.5" />
 
-          <Avatar uid={item.uid} name={item.real_name} photo={item.photo_url} size={compact ? 32 : 40} />
+          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 32 : 40} />
 
           <div className="flex-1 min-w-0">
             {item.real_name && (
