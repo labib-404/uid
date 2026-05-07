@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
-  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical,
+  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users,
 } from "lucide-react";
 import { FBId, TAGS, TAG_COLORS, Tag } from "@/types/fbid";
 import { Button } from "@/components/ui/button";
@@ -20,15 +20,28 @@ interface Props {
   onChange: (next: FBId) => void;
   onDelete: () => void;
   onOpenNote: () => void;
+  onFetchProfile?: () => void;
 }
 
-function Avatar({ uid, name, size = 40 }: { uid: string; name: string | null | undefined; size?: number }) {
+function Avatar({ uid, name, photo, size = 40 }: { uid: string; name: string | null | undefined; photo?: string | null; size?: number }) {
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt={name ?? uid}
+        loading="lazy"
+        className="rounded-full shrink-0 object-cover border border-border"
+        style={{ width: size, height: size }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   const initials = (name ?? uid).slice(0, 2).toUpperCase();
   const hue = uid.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
-  const grad = `linear-gradient(135deg, hsl(${hue},65%,42%), hsl(${(hue + 50) % 360},70%,55%))`;
+  const grad = `linear-gradient(135deg, hsl(${hue},35%,38%), hsl(${(hue + 40) % 360},40%,48%))`;
   return (
     <div
-      className="rounded-full shrink-0 flex items-center justify-center text-white font-bold border border-white/10"
+      className="rounded-full shrink-0 flex items-center justify-center text-white font-semibold border border-border"
       style={{ width: size, height: size, background: grad, fontSize: size * 0.36 }}
     >
       {initials}
@@ -36,7 +49,7 @@ function Avatar({ uid, name, size = 40 }: { uid: string; name: string | null | u
   );
 }
 
-export default function FBIdItem({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote }: Props) {
+export default function FBIdItem({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: Props) {
   const { viewMode, swipeDelete } = useSettings();
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
@@ -96,7 +109,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
         <div className="flex items-start gap-2.5">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1.5" />
 
-          <Avatar uid={item.uid} name={item.real_name} size={compact ? 32 : 40} />
+          <Avatar uid={item.uid} name={item.real_name} photo={item.photo_url} size={compact ? 32 : 40} />
 
           <div className="flex-1 min-w-0">
             {item.real_name && (
@@ -105,6 +118,11 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0" title="Copy name">
                   <Copy className="w-3 h-3" />
                 </button>
+                {item.follower_count && (
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 shrink-0">
+                    <Users className="w-3 h-3" /> {item.follower_count}
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -147,6 +165,11 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
+            {onFetchProfile && (
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onFetchProfile} title="Fetch profile info">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            )}
             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => update({ pinned: !item.pinned })} title="Save">
               <Star className={`w-4 h-4 ${item.pinned ? "fill-amber-400 text-amber-400" : ""}`} />
             </Button>
