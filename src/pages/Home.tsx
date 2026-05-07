@@ -293,15 +293,15 @@ export default function Home() {
       ) : (
         <div className={viewMode === "compact" ? "grid grid-cols-1 sm:grid-cols-2 gap-2" : "space-y-2"}>
           {visible.map((item) => (
-            <FBIdItem
+            <Row
               key={item.id}
               item={item}
               selected={selected.has(item.id)}
-              onToggleSelect={() => toggleSel(item.id)}
+              onToggleSelect={toggleSel}
               onChange={updateLocal}
-              onDelete={() => deleteOne(item)}
-              onOpenNote={() => setNoteFor(item)}
-              onFetchProfile={() => fetchOne(item.uid)}
+              onDelete={deleteOne}
+              onOpenNote={openNote}
+              onFetchProfile={fetchOne}
             />
           ))}
           <div ref={sentinelRef} />
@@ -315,3 +315,27 @@ export default function Home() {
     </div>
   );
 }
+
+import { memo } from "react";
+type RowProps = {
+  item: FBId;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  onChange: (next: FBId) => void;
+  onDelete: (item: FBId) => void;
+  onOpenNote: (item: FBId) => void;
+  onFetchProfile: (uid: string) => void;
+};
+const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile }: RowProps) {
+  return (
+    <FBIdItem
+      item={item}
+      selected={selected}
+      onToggleSelect={() => onToggleSelect(item.id)}
+      onChange={onChange}
+      onDelete={() => onDelete(item)}
+      onOpenNote={() => onOpenNote(item)}
+      onFetchProfile={() => onFetchProfile(item.uid)}
+    />
+  );
+});
