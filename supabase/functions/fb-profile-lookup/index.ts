@@ -179,62 +179,71 @@ const IG_RESERVED = new Set([
   "p","reel","reels","tv","stories","explore","accounts","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed","developer","press","jobs","blog","fragment",
 ]);
 
-async function checkInstagramExists(username: string): Promise<boolean> {
+type IgCheck = { exists: boolean; rateLimited?: boolean };
+
+const IG_TTL = 1000 * 60 * 60 * 12; // 12h
+const IG_CACHE = new Map<string, { exists: boolean; at: number }>();
+const IG_INFLIGHT = new Map<string, Promise<IgCheck>>();
+
+async function checkInstagramExists(username: string, force = false): Promise<IgCheck> {
   const u = username.trim().replace(/^@/, "");
-  if (!u || !/^[a-zA-Z0-9_.]{2,30}$/.test(u)) return false;
-  if (IG_RESERVED.has(u.toLowerCase())) return false;
+  if (!u || !/^[a-zA-Z0-9_.]{2,30}$/.test(u)) return { exists: false };
+  if (IG_RESERVED.has(u.toLowerCase())) return { exists: false };
   const key = u.toLowerCase();
   const now = Date.now();
-  const cached = IG_CACHE.get(key);
-  if (cached && now - cached.at < IG_TTL) return cached.exists;
+  if (!force) {
+    const cached = IG_CACHE.get(key);
+    if (cached && now - cached.at < IG_TTL) return { exists: cached.exists };
+  }
   const inflight = IG_INFLIGHT.get(key);
   if (inflight) return inflight;
-  const p = (async () => {
+  const p: Promise<IgCheck> = (async () => {
    try {
     const res = await fetch(`https://www.instagram.com/${u}/`, {
       headers: IG_HEADERS,
       redirect: "manual",
       signal: AbortSignal.timeout(7000),
     });
+    if (res.status === 429) return { exists: false, rateLimited: true };
     if (res.status === 200) {
       const text = await res.text();
-      // IG returns 200 even for missing users sometimes; check markers
       if (/"username":\s*"/.test(text) || /<meta property="og:title"/i.test(text)) {
-        if (/Sorry, this page isn't available/i.test(text)) return false;
-        return true;
+        if (/Sorry, this page isn't available/i.test(text)) return { exists: false };
+        return { exists: true };
       }
-      return false;
+      return { exists: false };
     }
     if (res.status === 302 || res.status === 301) {
       const loc = res.headers.get("location") || "";
-      // redirects to /accounts/login means exists (gated)
-      if (loc.includes("/accounts/login")) return true;
-      return false;
+      if (loc.includes("/accounts/login")) return { exists: true };
+      return { exists: false };
     }
-    return false;
+    return { exists: false };
    } catch {
-     return false;
+     return { exists: false };
    }
   })();
   IG_INFLIGHT.set(key, p);
   try {
-    const exists = await p;
-    IG_CACHE.set(key, { exists, at: Date.now() });
-    return exists;
+    const r = await p;
+    if (!r.rateLimited) IG_CACHE.set(key, { exists: r.exists, at: Date.now() });
+    return r;
   } finally {
     IG_INFLIGHT.delete(key);
   }
 }
 
-const IG_TTL = 1000 * 60 * 60 * 12; // 12h
-const IG_CACHE = new Map<string, { exists: boolean; at: number }>();
-const IG_INFLIGHT = new Map<string, Promise<boolean>>();
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { uids } = (await req.json()) as { uids: string[] };
+    const body = (await req.json()) as {
+      uids: string[];
+      igOnly?: boolean;
+      igCandidates?: Record<string, string[]>;
+      force?: boolean;
+    };
+    const { uids, igOnly, igCandidates, force } = body;
     if (!Array.isArray(uids) || uids.length === 0 || uids.length > 20) {
       return new Response(JSON.stringify({ error: "Provide 1-20 uids" }), {
         status: 400,
@@ -247,6 +256,20 @@ Deno.serve(async (req) => {
       uids.map(async (uid) => {
         const cleanUid = String(uid).trim();
         if (!cleanUid) return;
+        if (igOnly) {
+          const cands = (igCandidates?.[cleanUid] ?? []).filter(
+            (v) => !!v && /^[a-zA-Z0-9_.]{2,30}$/.test(v)
+          );
+          let verified: string | null = null;
+          let rate = false;
+          for (const c of cands) {
+            const r = await checkInstagramExists(c, !!force);
+            if (r.rateLimited) { rate = true; break; }
+            if (r.exists) { verified = c; break; }
+          }
+          results[cleanUid] = { instagramUsername: verified, instagramRateLimited: rate };
+          return;
+        }
         const { html, rateLimited } = await fetchFb(cleanUid);
         if (rateLimited) {
           results[cleanUid] = { error: "rate_limited" };
@@ -266,11 +289,14 @@ Deno.serve(async (req) => {
           (v): v is string => !!v && /^[a-zA-Z0-9_.]{2,30}$/.test(v)
         );
         let verifiedIg: string | null = null;
+        let igRate = false;
         for (const c of candidates) {
-          if (await checkInstagramExists(c)) { verifiedIg = c; break; }
+          const r = await checkInstagramExists(c, !!force);
+          if (r.rateLimited) { igRate = true; break; }
+          if (r.exists) { verifiedIg = c; break; }
         }
         data.instagramUsername = verifiedIg;
-        results[cleanUid] = data;
+        results[cleanUid] = { ...data, instagramRateLimited: igRate };
       })
     );
 
