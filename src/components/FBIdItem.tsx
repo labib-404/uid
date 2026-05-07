@@ -38,9 +38,34 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
         style={{ width: size, height: size }}
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
-          toast.error("Profile picture failed to load", {
-            description: hasIdentity ? `${label} · UID ${uid}` : `Unknown user · UID ${uid}`,
-          });
+          const hue = uid.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+          const grad = `linear-gradient(135deg, hsl(${hue},35%,38%), hsl(${(hue + 40) % 360},40%,48%))`;
+          const initialsSrc = name?.trim() || username || uid;
+          const initials =
+            (hasIdentity ? initialsSrc.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2) : "?")
+              .toUpperCase() || "?";
+          toast.error(
+            (
+              <div className="flex items-start gap-3">
+                <div
+                  className="rounded-full shrink-0 flex items-center justify-center text-white text-xs font-semibold border border-border/50"
+                  style={{ width: 36, height: 36, background: grad }}
+                >
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold leading-tight">Profile picture failed</div>
+                  <div className="text-xs text-muted-foreground truncate mt-0.5">
+                    {hasIdentity ? label : "Unknown user"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/80 font-mono truncate">
+                    UID · {uid}
+                  </div>
+                </div>
+              </div>
+            ),
+            { duration: 4000 }
+          );
         }}
       />
     );
