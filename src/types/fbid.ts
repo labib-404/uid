@@ -1,6 +1,5 @@
 export type FBId = {
   id: string;
-  user_id: string;
   uid: string;
   password: string | null;
   pinned: boolean;
@@ -22,9 +21,9 @@ export const TAGS = ["VIP", "Hot", "New", "Done", "Skip"] as const;
 export type Tag = typeof TAGS[number];
 
 export const TAG_COLORS: Record<Tag, string> = {
-  VIP: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
-  Hot: "bg-red-500/20 text-red-300 border-red-500/40",
-  New: "bg-blue-500/20 text-blue-300 border-blue-500/40",
-  Done: "bg-green-500/20 text-green-300 border-green-500/40",
-  Skip: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40",
+  VIP: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  Hot:  "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  New:  "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  Done: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  Skip: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 };
