@@ -13,6 +13,15 @@ import {
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/useSettings";
 
+function formatCount(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || n === "") return "";
+  const num = typeof n === "number" ? n : parseInt(String(n).replace(/[^0-9]/g, ""), 10);
+  if (!Number.isFinite(num)) return String(n);
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(num >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
+  if (num >= 1_000) return (num / 1_000).toFixed(num >= 10_000 ? 0 : 1).replace(/\.0$/, "") + "K";
+  return String(num);
+}
+
 interface Props {
   item: FBId;
   selected: boolean;
@@ -126,7 +135,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
   const compact = viewMode === "compact";
 
   return (
-    <div className="relative overflow-hidden rounded-xl touch-pan-y">
+    <div className="relative overflow-hidden rounded-xl touch-pan-y group">
       {swipeDelete && (
         <motion.div
           style={{ opacity: bgOpacity }}
@@ -149,7 +158,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
               onDragEnd,
             }
           : {})}
-        className={`relative bg-card border rounded-xl shadow-card transition-colors ${selected ? "border-primary ring-1 ring-primary/40" : "border-border/60"} ${compact ? "p-2" : "p-3"}`}
+        className={`relative bg-card border rounded-xl shadow-card transition-all duration-200 hover:border-border ${selected ? "border-primary ring-1 ring-primary/40 bg-primary/[0.03]" : "border-border/60"} ${compact ? "p-2.5" : "p-3.5"}`}
       >
         <div className="flex items-start gap-3">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-2" />
@@ -162,7 +171,7 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
                 <div className="text-[13px] font-semibold truncate">{item.real_name}</div>
                 {item.follower_count && (
                   <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0">
-                    <Users className="w-3 h-3" /> {item.follower_count}
+                    <Users className="w-3 h-3" /> {formatCount(item.follower_count)}
                   </span>
                 )}
                 <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0 ml-auto" title="Copy name">
