@@ -1,9 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Upload, Star, Settings, Shield, LogOut, Sparkles } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { Home, Upload, Star, Settings, Zap } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
-import { Button } from "@/components/ui/button";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home },
@@ -13,44 +11,23 @@ const tabs = [
 ];
 
 export default function AppLayout() {
-  const { user, isAdmin, signOut } = useAuth();
   const { fontSize } = useSettings();
   const navigate = useNavigate();
-
   const fontClass = fontSize === "sm" ? "text-sm" : fontSize === "lg" ? "text-lg" : "text-base";
 
   return (
-    <div className={`min-h-screen ${fontClass} pb-20`}>
-      {/* glow bg */}
+    <div className={`min-h-screen ${fontClass} pb-24`}>
       <div className="fixed inset-0 bg-gradient-glow pointer-events-none -z-10" />
 
-      {/* header */}
       <header className="sticky top-0 z-30 glass border-b">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2"
-          >
+          <button onClick={() => navigate("/")} className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
+              <Zap className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-gradient">FB UID Pro</span>
+            <span className="font-bold tracking-tight">FB UID <span className="text-primary">Pro</span></span>
           </button>
-          <div className="flex items-center gap-1">
-            {isAdmin && (
-              <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} title="Admin">
-                <Shield className="w-4 h-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={async () => { await signOut(); navigate("/auth"); }}
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Personal</span>
         </div>
       </header>
 
@@ -58,7 +35,6 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      {/* bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-3xl mx-auto px-4 pb-3">
           <div className="glass rounded-2xl shadow-card flex items-center justify-around p-1.5 relative">
