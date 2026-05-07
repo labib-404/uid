@@ -19,7 +19,7 @@ type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 
 export default function Home() {
   const { items, setItems, loading } = useFBIds();
-  const { fetchProfiles, loading: fetching } = useFBProfile(setItems);
+  const { fetchProfiles, recheckInstagram, loading: fetching, igProgress } = useFBProfile(setItems);
   const { viewMode } = useSettings();
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -49,6 +49,33 @@ export default function Home() {
       }
     })();
   }, [items, fetchProfiles]);
+
+  // Background IG re-verification after 12h cache expiry
+  const igRecheckedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const TTL = 12 * 60 * 60 * 1000;
+    const now = Date.now();
+    const stale = items.filter((i) => {
+      if (igRecheckedRef.current.has(i.uid)) return false;
+      if (!i.username && !i.instagram_username) return false;
+      const ts = i.instagram_checked_at ? Date.parse(i.instagram_checked_at) : 0;
+      return !ts || now - ts > TTL;
+    });
+    if (!stale.length) return;
+    stale.forEach((i) => igRecheckedRef.current.add(i.uid));
+    (async () => {
+      for (let i = 0; i < stale.length; i += 20) {
+        await recheckInstagram(
+          stale.slice(i, i + 20).map((s) => ({
+            uid: s.uid,
+            username: s.username,
+            instagram_username: s.instagram_username,
+          })),
+          false
+        );
+      }
+    })();
+  }, [items, recheckInstagram]);
 
   const filtered = useMemo(() => {
     let out = items;
@@ -154,6 +181,14 @@ export default function Home() {
   };
 
   const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
+  const recheckOne = useCallback(
+    (item: FBId) =>
+      recheckInstagram(
+        [{ uid: item.uid, username: item.username, instagram_username: item.instagram_username }],
+        true
+      ),
+    [recheckInstagram]
+  );
 
   const openNote = useCallback((item: FBId) => setNoteFor(item), []);
 
@@ -186,6 +221,22 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
+      {igProgress.total > 0 && (
+        <div className="sticky top-0 z-30 -mx-1">
+          <div className="glass rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+            <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+            <span className="text-muted-foreground">
+              Verifying Instagram… {igProgress.done}/{igProgress.total}
+            </span>
+            <div className="ml-auto w-24 h-1 bg-muted rounded overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-colors hover:border-primary/40">
@@ -302,6 +353,7 @@ export default function Home() {
               onDelete={deleteOne}
               onOpenNote={openNote}
               onFetchProfile={fetchOne}
+              onRecheckInstagram={recheckOne}
             />
           ))}
           <div ref={sentinelRef} />
