@@ -168,6 +168,48 @@ async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
   }
 }
 
+const IG_HEADERS: Record<string, string> = {
+  accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "accept-language": "en-US,en;q=0.9",
+  "user-agent":
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+};
+
+const IG_RESERVED = new Set([
+  "p","reel","reels","tv","stories","explore","accounts","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed","developer","press","jobs","blog","fragment",
+]);
+
+async function checkInstagramExists(username: string): Promise<boolean> {
+  const u = username.trim().replace(/^@/, "");
+  if (!u || !/^[a-zA-Z0-9_.]{2,30}$/.test(u)) return false;
+  if (IG_RESERVED.has(u.toLowerCase())) return false;
+  try {
+    const res = await fetch(`https://www.instagram.com/${u}/`, {
+      headers: IG_HEADERS,
+      redirect: "manual",
+      signal: AbortSignal.timeout(7000),
+    });
+    if (res.status === 200) {
+      const text = await res.text();
+      // IG returns 200 even for missing users sometimes; check markers
+      if (/"username":\s*"/.test(text) || /<meta property="og:title"/i.test(text)) {
+        if (/Sorry, this page isn't available/i.test(text)) return false;
+        return true;
+      }
+      return false;
+    }
+    if (res.status === 302 || res.status === 301) {
+      const loc = res.headers.get("location") || "";
+      // redirects to /accounts/login means exists (gated)
+      if (loc.includes("/accounts/login")) return true;
+      return false;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -199,6 +241,15 @@ Deno.serve(async (req) => {
           const dataUrl = await fetchPhotoAsDataUrl(data.photoUrl);
           if (dataUrl) data.photoUrl = dataUrl;
         }
+        // Verify Instagram presence using candidates: parsed IG username, then FB username
+        const candidates = [data.instagramUsername, data.username].filter(
+          (v): v is string => !!v && /^[a-zA-Z0-9_.]{2,30}$/.test(v)
+        );
+        let verifiedIg: string | null = null;
+        for (const c of candidates) {
+          if (await checkInstagramExists(c)) { verifiedIg = c; break; }
+        }
+        data.instagramUsername = verifiedIg;
         results[cleanUid] = data;
       })
     );
