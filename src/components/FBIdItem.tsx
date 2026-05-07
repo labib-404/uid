@@ -185,7 +185,14 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                 <button onClick={() => copy(item.username!, "Username")} className="text-muted-foreground hover:text-foreground shrink-0" title="Copy username">
                   <Copy className="w-3.5 h-3.5" />
                 </button>
-                {item.instagram_username && (
+                {item.instagram_checking ? (
+                  <span
+                    title="Checking Instagram…"
+                    className="shrink-0 inline-flex items-center justify-center rounded-full p-0.5 bg-muted text-muted-foreground animate-pulse"
+                  >
+                    <Instagram className="w-3 h-3" />
+                  </span>
+                ) : item.instagram_username ? (
                   <a
                     href={`https://instagram.com/${item.instagram_username}`}
                     target="_blank"
@@ -195,7 +202,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                   >
                     <Instagram className="w-3 h-3" />
                   </a>
-                )}
+                ) : null}
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
