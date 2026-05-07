@@ -115,14 +115,17 @@ export default function FBIdItem({ item, selected, onToggleSelect, onChange, onD
             {item.real_name && (
               <div className="flex items-center gap-1.5">
                 <div className="text-sm font-semibold truncate">{item.real_name}</div>
-                <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0" title="Copy name">
-                  <Copy className="w-3 h-3" />
-                </button>
+                {item.username && (
+                  <span className="text-[11px] text-muted-foreground truncate shrink-0">@{item.username}</span>
+                )}
                 {item.follower_count && (
                   <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 shrink-0">
                     <Users className="w-3 h-3" /> {item.follower_count}
                   </span>
                 )}
+                <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0 ml-auto" title="Copy name">
+                  <Copy className="w-3 h-3" />
+                </button>
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
