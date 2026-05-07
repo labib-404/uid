@@ -221,22 +221,36 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
-      {igProgress.total > 0 && (
-        <div className="sticky top-0 z-30 -mx-1">
-          <div className="glass rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-            <RefreshCw className="w-3 h-3 animate-spin text-primary" />
-            <span className="text-muted-foreground">
-              Verifying Instagram… {igProgress.done}/{igProgress.total}
-            </span>
-            <div className="ml-auto w-24 h-1 bg-muted rounded overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
-              />
+      <AnimatePresence>
+        {igProgress.total > 0 && (
+          <motion.div
+            initial={{ y: 20, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 20, opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+          >
+            <div className="glass rounded-full pl-3 pr-4 py-2 flex items-center gap-2.5 text-xs shadow-lg border border-primary/30 bg-background/90 backdrop-blur-xl">
+              <div className="relative flex items-center justify-center">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-primary" />
+                <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              </div>
+              <span className="font-medium tabular-nums">
+                <span className="text-primary">{igProgress.done}</span>
+                <span className="text-muted-foreground">/{igProgress.total}</span>
+              </span>
+              <span className="text-muted-foreground hidden sm:inline">verifying Instagram</span>
+              <div className="w-20 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-primary to-primary/70"
+                  animate={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-colors hover:border-primary/40">
