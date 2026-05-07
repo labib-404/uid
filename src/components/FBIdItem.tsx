@@ -1,7 +1,7 @@
 import { useState, memo } from "react";
 import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
-  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users,
+  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, Instagram,
 } from "lucide-react";
 import { FBId, TAGS, TAG_COLORS, Tag } from "@/types/fbid";
 import { Button } from "@/components/ui/button";
@@ -185,6 +185,17 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                 <button onClick={() => copy(item.username!, "Username")} className="text-muted-foreground hover:text-foreground shrink-0" title="Copy username">
                   <Copy className="w-3.5 h-3.5" />
                 </button>
+                {item.instagram_username && (
+                  <a
+                    href={`https://instagram.com/${item.instagram_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Instagram @${item.instagram_username}`}
+                    className="shrink-0 inline-flex items-center justify-center rounded-full p-0.5 bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 text-white"
+                  >
+                    <Instagram className="w-3 h-3" />
+                  </a>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
