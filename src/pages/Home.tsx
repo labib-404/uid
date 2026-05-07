@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -316,7 +316,6 @@ export default function Home() {
   );
 }
 
-import { memo } from "react";
 type RowProps = {
   item: FBId;
   selected: boolean;
