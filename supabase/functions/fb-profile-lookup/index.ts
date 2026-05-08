@@ -108,6 +108,25 @@ function parseProfile(html: string, uid: string) {
   const desc = meta(html, "og:description") ?? "";
   const fm = desc.match(/([\d,]+)\s*(?:followers|likes)/i);
   if (fm) followerCount = formatFollowers(fm[1]);
+  if (!followerCount) {
+    // body-text / JSON fallback
+    const bm = html.match(/>([\d,]+)\s*(?:followers|likes)</i)
+      || html.match(/"follower_count"\s*:\s*(\d+)/)
+      || html.match(/"subscribers_count"\s*:\s*\{\s*"count"\s*:\s*(\d+)/);
+    if (bm) followerCount = formatFollowers(bm[1]);
+  }
+
+  // Friends count — try og:description first, then JSON keys, then body
+  let friendCount: string | null = null;
+  const fdm = desc.match(/([\d,]+)\s*friends/i);
+  if (fdm) friendCount = formatFollowers(fdm[1]);
+  if (!friendCount) {
+    const fjm = html.match(/"friend_count"\s*:\s*(\d+)/)
+      || html.match(/"friends_count"\s*:\s*(\d+)/)
+      || html.match(/"friends"\s*:\s*\{\s*"count"\s*:\s*(\d+)/)
+      || html.match(/>([\d,]+)\s*friends</i);
+    if (fjm) friendCount = formatFollowers(fjm[1]);
+  }
 
   let nationality: string | null = null;
   for (const p of [
@@ -132,25 +151,35 @@ function parseProfile(html: string, uid: string) {
   }
 
   let instagramUsername: string | null = null;
-  const igPatterns = [
-    /instagram\.com\\?\/([a-zA-Z0-9_.]{2,30})/,
-    /"linked_social_username"\s*:\s*"([a-zA-Z0-9_.]{2,30})"/,
-  ];
   const IG_BL = new Set([
-    "p","reel","reels","tv","stories","explore","accounts","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed",
+    "p","reel","reels","tv","stories","explore","accounts","sharedfiles","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed",
   ]);
-  for (const p of igPatterns) {
-    const m = html.match(p);
-    if (m) {
-      const v = m[1];
-      if (!IG_BL.has(v.toLowerCase()) && /^[a-zA-Z0-9_.]+$/.test(v)) {
-        instagramUsername = v;
-        break;
-      }
+  const validIg = (raw: string): string | null => {
+    const c = raw.replace(/\/$/, "").trim();
+    if (!c || c.length < 2 || c.length > 30) return null;
+    if (IG_BL.has(c.toLowerCase())) return null;
+    if (!/^[a-zA-Z0-9_.]+$/.test(c)) return null;
+    return c;
+  };
+  const igStrategies: RegExp[] = [
+    /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]{1,30})\/?(?:["'?#\s\\]|$)/gi,
+    /instagram\.com\\\/([a-zA-Z0-9_.]{1,30})(?:\\\/|["'\s]|$)/g,
+    /"linked_social_username"\s*:\s*"([a-zA-Z0-9_.]{2,30})"/g,
+    /"instagram"\s*:\s*"([a-zA-Z0-9_.]{2,30})"/g,
+    /"INSTAGRAM"[^}]{0,120}"username"\s*:\s*"([a-zA-Z0-9_.]{2,30})"/g,
+    /"username"\s*:\s*"([a-zA-Z0-9_.]{2,30})"[^}]{0,120}"INSTAGRAM"/g,
+    /instagram\.com(?:%2F|\/)([a-zA-Z0-9_.]{1,30})(?:%2F|\/|&|"|'|\s|\\|$)/gi,
+    /"url"\s*:\s*"https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]{1,30})(?:\/|"|$)/g,
+    /instagram[^<"]{0,80}@([a-zA-Z0-9_.]{2,30})/gi,
+  ];
+  outer: for (const re of igStrategies) {
+    for (const m of html.matchAll(re)) {
+      const v = validIg(m[1]);
+      if (v) { instagramUsername = v; break outer; }
     }
   }
 
-  return { name, username, userId, followerCount, nationality, photoUrl, instagramUsername };
+  return { name, username, userId, followerCount, friendCount, nationality, photoUrl, instagramUsername };
 }
 
 async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
