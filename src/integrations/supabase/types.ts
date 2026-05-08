@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           follower_count: string | null
+          friend_count: string | null
           id: string
           instagram_username: string | null
           nationality: string | null
@@ -37,6 +38,7 @@ export type Database = {
         Insert: {
           created_at?: string
           follower_count?: string | null
+          friend_count?: string | null
           id?: string
           instagram_username?: string | null
           nationality?: string | null
@@ -56,6 +58,7 @@ export type Database = {
         Update: {
           created_at?: string
           follower_count?: string | null
+          friend_count?: string | null
           id?: string
           instagram_username?: string | null
           nationality?: string | null

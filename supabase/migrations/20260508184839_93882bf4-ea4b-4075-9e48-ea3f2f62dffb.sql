@@ -1,0 +1,1 @@
+alter table public.facebook_ids add column if not exists friend_count text;
