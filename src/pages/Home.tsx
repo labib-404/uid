@@ -143,6 +143,19 @@ export default function Home() {
     fetchProfiles(missing);
   };
 
+  const recheckAllInstagram = () => {
+    const candidates = items.filter((i) => i.username || i.instagram_username);
+    if (!candidates.length) { toast("No usernames to verify"); return; }
+    recheckInstagram(
+      candidates.map((i) => ({
+        uid: i.uid,
+        username: i.username,
+        instagram_username: i.instagram_username,
+      })),
+      true
+    );
+  };
+
   const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
   const recheckOne = useCallback(
     (item: FBId) =>
@@ -294,6 +307,9 @@ export default function Home() {
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={fetchMissing} disabled={fetching}>
           <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Fetch missing
+        </Button>
+        <Button variant="outline" size="sm" onClick={recheckAllInstagram} disabled={fetching || igProgress.total > 0}>
+          <RefreshCw className={`w-4 h-4 mr-1 ${igProgress.total > 0 ? "animate-spin" : ""}`} /> Recheck IG
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
