@@ -12,6 +12,7 @@ export type FBId = {
   username?: string | null;
   photo_url?: string | null;
   follower_count?: string | null;
+  friend_count?: string | null;
   nationality?: string | null;
   instagram_username?: string | null;
   profile_fetched_at?: string | null;
