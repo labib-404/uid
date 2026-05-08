@@ -253,6 +253,19 @@ type FbCacheEntry = {
 const FB_CACHE = new Map<string, FbCacheEntry>();
 const FB_INFLIGHT = new Map<string, Promise<FbCacheEntry | null>>();
 
+function hasUsefulProfile(entry: FbCacheEntry | null): entry is FbCacheEntry {
+  if (!entry) return false;
+  const p = entry.parsed;
+  return Boolean(
+    p.name?.trim() ||
+      p.username?.trim() ||
+      p.followerCount ||
+      p.friendCount ||
+      p.nationality ||
+      p.instagramUsername
+  );
+}
+
 function extractMetaRaw(html: string) {
   return {
     ogTitle: meta(html, "og:title"),
@@ -282,6 +295,8 @@ async function getFbProfile(uid: string, force = false): Promise<{ entry: FbCach
     if (!html) return null;
     const parsed = parseProfile(html, uid);
     const metaRaw = extractMetaRaw(html);
+    const entryWithoutPhoto: FbCacheEntry = { at: Date.now(), parsed, metaRaw, photoDataUrl: null };
+    if (!hasUsefulProfile(entryWithoutPhoto)) return null;
     let photoDataUrl: string | null = null;
     if (parsed.photoUrl) {
       photoDataUrl = await fetchPhotoAsDataUrl(parsed.photoUrl);

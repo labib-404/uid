@@ -19,6 +19,18 @@ type ProfileResult = {
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 
+function hasUsefulProfileResult(result?: ProfileResult | null) {
+  if (!result || result.error) return false;
+  return Boolean(
+    result.name?.trim() ||
+      result.username?.trim() ||
+      result.followerCount ||
+      result.friendCount ||
+      result.nationality ||
+      result.instagramUsername
+  );
+}
+
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
   const [igProgress, setIgProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
@@ -45,7 +57,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       setItems((prev) =>
         prev.map((p) =>
           listSet.has(p.uid)
-            ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: (p.fetch_attempts ?? 0) + 1 }
+            ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
             : p
         )
       );
@@ -61,11 +73,11 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         // Auto-retry UIDs that failed (not rate-limited)
         const failedUids = list.filter((u) => {
           const r = results[u];
-          return !r || (r.error && r.error !== "rate_limited");
+          return !hasUsefulProfileResult(r) && r?.error !== "rate_limited";
         });
         if (failedUids.length) {
           setItems((prev) =>
-            prev.map((p) => (failedUids.includes(p.uid) ? { ...p, fetch_status: "retrying" } : p))
+            prev.map((p) => (failedUids.includes(p.uid) ? { ...p, fetch_status: "retrying", fetch_attempts: 2 } : p))
           );
           await new Promise((r) => setTimeout(r, 1200));
           const retry = await supabase.functions.invoke("fb-profile-lookup", {
@@ -82,7 +94,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
           prev.map((p) => {
             const r = results[p.uid];
             if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p;
-            if (r.error) {
+            if (r.error || !hasUsefulProfileResult(r)) {
               failCount++;
               return { ...p, instagram_checking: false, fetch_status: r.error === "rate_limited" ? "rate_limited" : "failed" };
             }

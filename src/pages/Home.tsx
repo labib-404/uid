@@ -39,7 +39,7 @@ export default function Home() {
   const autoFetchedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const missing = items
-      .filter((i) => !i.real_name && !i.photo_url && !autoFetchedRef.current.has(i.uid))
+      .filter((i) => !i.real_name && !i.username && !i.photo_url && i.fetch_status !== "done" && !autoFetchedRef.current.has(i.uid))
       .map((i) => i.uid);
     if (!missing.length) return;
     missing.forEach((u) => autoFetchedRef.current.add(u));
@@ -175,7 +175,9 @@ export default function Home() {
   };
 
   const fetchMissing = () => {
-    const missing = items.filter((i) => !i.real_name && !i.photo_url).map((i) => i.uid);
+    const missing = items
+      .filter((i) => !i.real_name && !i.username && !i.photo_url && i.fetch_status !== "done")
+      .map((i) => i.uid);
     if (!missing.length) { toast("All profiles already fetched"); return; }
     fetchProfiles(missing);
   };
