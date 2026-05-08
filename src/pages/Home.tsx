@@ -241,9 +241,9 @@ export default function Home() {
       )}
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (
-          <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-colors hover:border-primary/40">
-            <div className={`text-lg font-bold tabular-nums ${s.color}`}>{s.val}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{s.label}</div>
+          <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-all hover:border-primary/50 hover:shadow-glow hover:-translate-y-0.5">
+            <div className={`font-display text-xl font-bold tabular-nums ${s.color}`}>{s.val}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
