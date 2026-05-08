@@ -136,11 +136,11 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
   const compact = viewMode === "compact";
 
   return (
-    <div className="relative overflow-hidden rounded-xl touch-pan-y group">
+    <div className="relative overflow-hidden touch-pan-y group">
       {swipeDelete && (
         <motion.div
           style={{ opacity: bgOpacity }}
-          className="absolute inset-0 bg-destructive rounded-xl flex items-center justify-end pr-6 pointer-events-none"
+          className="absolute inset-0 bg-destructive border-[1.5px] border-foreground flex items-center justify-end pr-6 pointer-events-none"
         >
           <motion.div style={{ scale: iconScale }}>
             <Trash2 className="text-destructive-foreground w-5 h-5" />
