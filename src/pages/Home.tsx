@@ -223,6 +223,15 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
+      <div className="border-b-2 border-foreground pb-3 -mt-1">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">§ 01 — Index</div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">{new Date().toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}</div>
+        </div>
+        <h1 className="font-display text-4xl mt-1 leading-none">
+          The <span className="italic text-primary">Ledger.</span>
+        </h1>
+      </div>
       {igProgress.total > 0 && (
         <div className="sticky top-0 z-30 -mx-1">
           <div className="brutal px-3 py-1.5 flex items-center gap-2 text-xs">
