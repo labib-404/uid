@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
         if (r.username != null) patch.username = r.username;
         if (r.photoUrl != null) patch.photo_url = r.photoUrl;
         if (r.followerCount != null) patch.follower_count = r.followerCount;
+        if (r.friendCount != null) patch.friend_count = r.friendCount;
         if (r.nationality != null) patch.nationality = r.nationality;
         patch.instagram_username = r.instagramUsername ?? null;
         const { error: upErr } = await admin
