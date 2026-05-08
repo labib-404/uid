@@ -35,47 +35,8 @@ export default function Home() {
 
   useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
-  // Auto-fetch profiles for any items missing data (runs once per session per uid)
-  const autoFetchedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const missing = items
-      .filter((i) => !i.real_name && !i.username && !i.photo_url && i.fetch_status !== "done" && !autoFetchedRef.current.has(i.uid))
-      .map((i) => i.uid);
-    if (!missing.length) return;
-    missing.forEach((u) => autoFetchedRef.current.add(u));
-    (async () => {
-      for (let i = 0; i < missing.length; i += 20) {
-        await fetchProfiles(missing.slice(i, i + 20));
-      }
-    })();
-  }, [items, fetchProfiles]);
-
-  // Background IG re-verification after 12h cache expiry
-  const igRecheckedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const TTL = 12 * 60 * 60 * 1000;
-    const now = Date.now();
-    const stale = items.filter((i) => {
-      if (igRecheckedRef.current.has(i.uid)) return false;
-      if (!i.username && !i.instagram_username) return false;
-      const ts = i.instagram_checked_at ? Date.parse(i.instagram_checked_at) : 0;
-      return !ts || now - ts > TTL;
-    });
-    if (!stale.length) return;
-    stale.forEach((i) => igRecheckedRef.current.add(i.uid));
-    (async () => {
-      for (let i = 0; i < stale.length; i += 20) {
-        await recheckInstagram(
-          stale.slice(i, i + 20).map((s) => ({
-            uid: s.uid,
-            username: s.username,
-            instagram_username: s.instagram_username,
-          })),
-          false
-        );
-      }
-    })();
-  }, [items, recheckInstagram]);
+  // Auto-fetch and background IG re-check are intentionally disabled to keep
+  // the app fast. Use the "Fetch missing" button or per-row fetch instead.
 
   const filtered = useMemo(() => {
     let out = items;
