@@ -255,19 +255,7 @@ const FB_INFLIGHT = new Map<string, Promise<FbCacheEntry | null>>();
 
 function hasUsefulProfile(entry: FbCacheEntry | null): entry is FbCacheEntry {
   if (!entry) return false;
-  const p = entry.parsed;
-  const m = entry.metaRaw;
-  return Boolean(
-    p.name?.trim() ||
-      p.username?.trim() ||
-      p.followerCount ||
-      p.friendCount ||
-      p.nationality ||
-      p.instagramUsername ||
-      p.photoUrl ||
-      m?.ogTitle ||
-      m?.ogImage
-  );
+  return true;
 }
 
 function extractMetaRaw(html: string) {
