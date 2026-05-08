@@ -187,8 +187,65 @@ const IG_RESERVED = new Set([
 type IgCheck = { exists: boolean; rateLimited?: boolean };
 
 const IG_TTL = 1000 * 60 * 60 * 12; // 12h
-const IG_CACHE = new Map<string, { exists: boolean; at: number }>();
+const IG_CACHE = new Map<string, { exists: boolean; at: number; canonical?: string }>();
 const IG_INFLIGHT = new Map<string, Promise<IgCheck>>();
+
+// FB profile cache — stores parsed identifiers + raw meta snapshot for fast rechecks
+const FB_TTL = 1000 * 60 * 60 * 12; // 12h
+type FbCacheEntry = {
+  at: number;
+  parsed: ReturnType<typeof parseProfile>;
+  metaRaw: { ogTitle: string | null; ogUrl: string | null; ogImage: string | null; ogDescription: string | null; alAndroid: string | null };
+  photoDataUrl?: string | null;
+};
+const FB_CACHE = new Map<string, FbCacheEntry>();
+const FB_INFLIGHT = new Map<string, Promise<FbCacheEntry | null>>();
+
+function extractMetaRaw(html: string) {
+  return {
+    ogTitle: meta(html, "og:title"),
+    ogUrl: meta(html, "og:url"),
+    ogImage: meta(html, "og:image"),
+    ogDescription: meta(html, "og:description"),
+    alAndroid: meta(html, "al:android:url"),
+  };
+}
+
+async function getFbProfile(uid: string, force = false): Promise<{ entry: FbCacheEntry | null; rateLimited: boolean }> {
+  const key = uid.toLowerCase();
+  const now = Date.now();
+  if (!force) {
+    const cached = FB_CACHE.get(key);
+    if (cached && now - cached.at < FB_TTL) return { entry: cached, rateLimited: false };
+  }
+  const inflight = FB_INFLIGHT.get(key);
+  if (inflight) {
+    const entry = await inflight;
+    return { entry, rateLimited: false };
+  }
+  let rateLimited = false;
+  const p: Promise<FbCacheEntry | null> = (async () => {
+    const { html, rateLimited: rl } = await fetchFb(uid);
+    if (rl) { rateLimited = true; return null; }
+    if (!html) return null;
+    const parsed = parseProfile(html, uid);
+    const metaRaw = extractMetaRaw(html);
+    let photoDataUrl: string | null = null;
+    if (parsed.photoUrl) {
+      photoDataUrl = await fetchPhotoAsDataUrl(parsed.photoUrl);
+    }
+    const entry: FbCacheEntry = { at: Date.now(), parsed, metaRaw, photoDataUrl };
+    FB_CACHE.set(key, entry);
+    return entry;
+  })();
+  FB_INFLIGHT.set(key, p);
+  try {
+    const entry = await p;
+    return { entry, rateLimited };
+  } finally {
+    FB_INFLIGHT.delete(key);
+  }
+}
 
 async function checkInstagramExists(username: string, force = false): Promise<IgCheck> {
   const u = username.trim().replace(/^@/, "");
@@ -231,7 +288,7 @@ async function checkInstagramExists(username: string, force = false): Promise<Ig
   IG_INFLIGHT.set(key, p);
   try {
     const r = await p;
-    if (!r.rateLimited) IG_CACHE.set(key, { exists: r.exists, at: Date.now() });
+    if (!r.rateLimited) IG_CACHE.set(key, { exists: r.exists, at: Date.now(), canonical: u });
     return r;
   } finally {
     IG_INFLIGHT.delete(key);
@@ -275,20 +332,17 @@ Deno.serve(async (req) => {
           results[cleanUid] = { instagramUsername: verified, instagramRateLimited: rate };
           return;
         }
-        const { html, rateLimited } = await fetchFb(cleanUid);
+        const { entry, rateLimited } = await getFbProfile(cleanUid, !!force);
         if (rateLimited) {
           results[cleanUid] = { error: "rate_limited" };
           return;
         }
-        if (!html) {
+        if (!entry) {
           results[cleanUid] = { error: "not_found" };
           return;
         }
-        const data = parseProfile(html, cleanUid);
-        if (data.photoUrl) {
-          const dataUrl = await fetchPhotoAsDataUrl(data.photoUrl);
-          if (dataUrl) data.photoUrl = dataUrl;
-        }
+        const data = { ...entry.parsed };
+        if (entry.photoDataUrl) data.photoUrl = entry.photoDataUrl;
         // Verify Instagram presence using candidates: parsed IG username, then FB username
         const candidates = [data.instagramUsername, data.username].filter(
           (v): v is string => !!v && /^[a-zA-Z0-9_.]{2,30}$/.test(v)
