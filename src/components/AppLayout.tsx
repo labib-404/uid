@@ -17,17 +17,17 @@ export default function AppLayout() {
 
   return (
     <div className={`min-h-screen ${fontClass} pb-24`}>
-      <div className="fixed inset-0 bg-gradient-glow pointer-events-none -z-10" />
+      <div className="fixed inset-0 bg-gradient-mesh pointer-events-none -z-10" />
 
       <header className="sticky top-0 z-30 glass border-b">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={() => navigate("/")} className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+            <div className="w-8 h-8 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
               <Zap className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold tracking-tight">FB UID <span className="text-primary">Pro</span></span>
+            <span className="font-display font-bold tracking-tight text-[15px]">FB UID <span className="text-gradient">Pro</span></span>
           </button>
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Personal</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium">Personal</span>
         </div>
       </header>
 
