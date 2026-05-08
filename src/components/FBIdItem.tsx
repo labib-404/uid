@@ -164,7 +164,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
         <div className="flex items-start gap-3">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-2" />
 
-          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 52 : 64} />
+          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 64 : 80} />
 
           <div className="flex-1 min-w-0 space-y-1.5">
             {item.real_name && (
