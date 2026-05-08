@@ -2,9 +2,10 @@ import { useSettings } from "@/hooks/useSettings";
 import { useFBIds } from "@/hooks/useFBIds";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Sun, Moon, Hand, Trash2, Database, Palette as PaletteIcon, RotateCcw } from "lucide-react";
+import { Sun, Moon, Hand, Trash2, Database, Palette as PaletteIcon, RotateCcw, Star } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme, swipeDelete, setSwipeDelete, palette, setPalette, resetPalette } = useSettings();
@@ -16,7 +17,49 @@ export default function SettingsPage() {
     { name: "Ocean",    primary: "#5CBDB9", accent: "#3B82F6", background: "#0C2340" },
     { name: "Paper",    primary: "#2D2D2D", accent: "#C9A84C", background: "#F5F3EE" },
     { name: "Mint Pop", primary: "#73FFB8", accent: "#FFEB3B", background: "#0A0A0A" },
+    { name: "Midnight",   primary: "#4F46E5", accent: "#A78BFA", background: "#0A0A1A" },
+    { name: "Ember",      primary: "#E85D3A", accent: "#F0D78C", background: "#1A1A1A" },
+    { name: "Noir Gold",  primary: "#C9A84C", accent: "#F0D78C", background: "#0D0D0D" },
+    { name: "Cloud",      primary: "#3B82F6", accent: "#94A3B8", background: "#FAFBFC" },
+    { name: "Sand",       primary: "#8B7355", accent: "#C9B99A", background: "#FAF8F5" },
+    { name: "Terracotta", primary: "#C4654A", accent: "#87A878", background: "#1A0F0A" },
+    { name: "Sienna",     primary: "#CD7F32", accent: "#E8C07A", background: "#1A0E08" },
+    { name: "Arctic",     primary: "#2E6B8A", accent: "#6BA3C8", background: "#E8F0F8" },
+    { name: "Slate",      primary: "#718096", accent: "#A0AEC0", background: "#1A202C" },
+    { name: "Coral",      primary: "#FF6B6B", accent: "#574B90", background: "#1A0A14" },
+    { name: "Blaze",      primary: "#FF6B35", accent: "#6C5CE7", background: "#14081A" },
+    { name: "Blush",      primary: "#9B72CF", accent: "#E8C5D0", background: "#1F1424" },
+    { name: "Sage",       primary: "#7D9B76", accent: "#A8C0A0", background: "#0F1A12" },
+    { name: "Sky Peach",  primary: "#7DD3FC", accent: "#F9A8A8", background: "#0A1420" },
+    { name: "Forest",     primary: "#5A8A5C", accent: "#A0C49D", background: "#0A1A10" },
+    { name: "Harvest",    primary: "#D4842A", accent: "#E8B84A", background: "#1A0A05" },
+    { name: "Sakura",     primary: "#E88AAB", accent: "#C45C7C", background: "#FEF0F5" },
+    { name: "Brutal",     primary: "#FF5722", accent: "#FFEB3B", background: "#FFFFFF" },
+    { name: "Vapor",      primary: "#A78BFA", accent: "#67E8F9", background: "#0F0A1F" },
+    { name: "Aurora Glass", primary: "#4ADE80", accent: "#A78BFA", background: "#0A0F1F" },
+    { name: "Navy Trust", primary: "#3B6FA0", accent: "#E8EDF3", background: "#0F1B3D" },
+    { name: "Emerald",    primary: "#0D7A5F", accent: "#C9A84C", background: "#04261C" },
   ];
+
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("paletteFavorites") || "[]"); }
+    catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem("paletteFavorites", JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (name: string) => {
+    setFavorites((f) =>
+      f.includes(name) ? f.filter((n) => n !== name) : [...f, name]
+    );
+  };
+
+  const sortedPresets = [...presets].sort((a, b) => {
+    const af = favorites.includes(a.name) ? 0 : 1;
+    const bf = favorites.includes(b.name) ? 0 : 1;
+    return af - bf;
+  });
 
   const clearAll = () => {
     if (!items.length) return toast.info("Nothing to clear");
@@ -89,22 +132,45 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-2">
-          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Presets</span>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => setPalette({ primary: p.primary, accent: p.accent, background: p.background })}
-                className="flex items-center gap-2 px-2.5 py-1.5 brutal hover:glow-ring transition-shadow"
-              >
-                <span className="flex -space-x-1">
-                  <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.background }} />
-                  <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.primary }} />
-                  <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.accent }} />
-                </span>
-                <span className="text-[11px] font-mono">{p.name}</span>
-              </button>
-            ))}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+              Presets · {presets.length}
+            </span>
+            {favorites.length > 0 && (
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+                ★ {favorites.length} fav
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+            {sortedPresets.map((p) => {
+              const isFav = favorites.includes(p.name);
+              return (
+                <div
+                  key={p.name}
+                  className="flex items-center gap-2 px-2 py-1.5 brutal hover:glow-ring transition-shadow"
+                >
+                  <button
+                    onClick={() => setPalette({ primary: p.primary, accent: p.accent, background: p.background })}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  >
+                    <span className="flex -space-x-1 shrink-0">
+                      <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.background }} />
+                      <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.primary }} />
+                      <span className="w-3 h-3 rounded-full border border-foreground/20" style={{ background: p.accent }} />
+                    </span>
+                    <span className="text-[11px] font-mono truncate">{p.name}</span>
+                  </button>
+                  <button
+                    onClick={() => toggleFavorite(p.name)}
+                    aria-label={isFav ? "Unfavorite" : "Favorite"}
+                    className="shrink-0 p-0.5"
+                  >
+                    <Star className={`w-3.5 h-3.5 transition-colors ${isFav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
