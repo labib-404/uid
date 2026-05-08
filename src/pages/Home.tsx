@@ -215,22 +215,22 @@ export default function Home() {
   };
 
   const stats = useMemo(() => [
-    { label: "Total", val: items.length, color: "text-foreground" },
-    { label: "Checked", val: items.filter((i) => i.visited).length, color: "text-emerald-400" },
-    { label: "Left", val: items.filter((i) => !i.visited).length, color: "text-blue-400" },
-    { label: "Saved", val: items.filter((i) => i.pinned).length, color: "text-amber-400" },
+    { label: "Total",   val: items.length,                              color: "text-foreground" },
+    { label: "Checked", val: items.filter((i) => i.visited).length,     color: "text-primary" },
+    { label: "Left",    val: items.filter((i) => !i.visited).length,    color: "text-accent" },
+    { label: "Saved",   val: items.filter((i) => i.pinned).length,      color: "text-foreground italic" },
   ], [items]);
 
   return (
     <div className="space-y-3">
       {igProgress.total > 0 && (
         <div className="sticky top-0 z-30 -mx-1">
-          <div className="glass rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+          <div className="brutal px-3 py-1.5 flex items-center gap-2 text-xs">
             <RefreshCw className="w-3 h-3 animate-spin text-primary" />
-            <span className="text-muted-foreground">
-              Verifying Instagram… {igProgress.done}/{igProgress.total}
+            <span className="font-mono uppercase tracking-wider text-[10px] text-muted-foreground">
+              IG verify · {igProgress.done}/{igProgress.total}
             </span>
-            <div className="ml-auto w-24 h-1 bg-muted rounded overflow-hidden">
+            <div className="ml-auto w-24 h-1.5 bg-muted border border-foreground overflow-hidden">
               <div
                 className="h-full bg-primary transition-all"
                 style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
@@ -240,10 +240,14 @@ export default function Home() {
         </div>
       )}
       <div className="grid grid-cols-4 gap-2">
-        {stats.map((s) => (
-          <div key={s.label} className="glass rounded-xl p-2.5 text-center transition-all hover:border-primary/50 hover:shadow-glow hover:-translate-y-0.5">
-            <div className={`font-display text-xl font-bold tabular-nums ${s.color}`}>{s.val}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mt-0.5">{s.label}</div>
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            className="brutal p-3 text-left transition-all hover:-translate-y-0.5 hover:translate-x-0.5 hover:shadow-glow relative"
+          >
+            <div className="absolute top-1.5 right-2 text-[8px] font-mono text-muted-foreground">0{i + 1}</div>
+            <div className={`font-display text-3xl tabular-nums leading-none ${s.color}`}>{s.val}</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-2 font-mono">{s.label}</div>
           </div>
         ))}
       </div>
