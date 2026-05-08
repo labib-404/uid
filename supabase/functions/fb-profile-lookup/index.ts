@@ -22,35 +22,58 @@ function formatFollowers(raw: string): string {
   return String(n);
 }
 
-async function tryFetch(url: string): Promise<{ html: string | null; rateLimited: boolean }> {
-  try {
-    const res = await fetch(url, {
-      headers: FB_HEADERS,
-      redirect: "follow",
-      signal: AbortSignal.timeout(9000),
-    });
-    if (res.status === 429) return { html: null, rateLimited: true };
-    if (!res.ok) return { html: null, rateLimited: false };
-    const text = await res.text();
-    if (text.length < 500) return { html: null, rateLimited: false };
-    return { html: text, rateLimited: false };
-  } catch {
-    return { html: null, rateLimited: false };
+const MOBILE_HEADERS: Record<string, string> = {
+  ...FB_HEADERS,
+  "user-agent":
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+};
+
+async function tryFetch(
+  url: string,
+  headers: Record<string, string> = FB_HEADERS,
+  attempts = 2,
+): Promise<{ html: string | null; rateLimited: boolean }> {
+  let rateLimited = false;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        headers,
+        redirect: "follow",
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.status === 429) { rateLimited = true; }
+      else if (res.ok) {
+        const text = await res.text();
+        if (text.length >= 500) return { html: text, rateLimited: false };
+      }
+    } catch { /* retry */ }
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 350 + i * 400));
   }
+  return { html: null, rateLimited };
 }
 
 async function fetchFb(uid: string) {
   const isNumeric = /^\d+$/.test(uid);
-  const a = isNumeric
-    ? `https://www.facebook.com/profile.php?id=${uid}`
-    : `https://www.facebook.com/${uid}`;
-  const r1 = await tryFetch(a);
-  if (r1.html) return r1;
-  if (r1.rateLimited) return r1;
-  const b = isNumeric
-    ? `https://www.facebook.com/${uid}`
-    : `https://www.facebook.com/profile.php?id=${uid}`;
-  return await tryFetch(b);
+  const urls: { url: string; headers: Record<string, string> }[] = isNumeric
+    ? [
+        { url: `https://www.facebook.com/profile.php?id=${uid}`, headers: FB_HEADERS },
+        { url: `https://m.facebook.com/profile.php?id=${uid}`, headers: MOBILE_HEADERS },
+        { url: `https://www.facebook.com/${uid}`, headers: FB_HEADERS },
+        { url: `https://mbasic.facebook.com/profile.php?id=${uid}`, headers: MOBILE_HEADERS },
+      ]
+    : [
+        { url: `https://www.facebook.com/${uid}`, headers: FB_HEADERS },
+        { url: `https://m.facebook.com/${uid}`, headers: MOBILE_HEADERS },
+        { url: `https://www.facebook.com/profile.php?id=${uid}`, headers: FB_HEADERS },
+        { url: `https://mbasic.facebook.com/${uid}`, headers: MOBILE_HEADERS },
+      ];
+  let anyRate = false;
+  for (const { url, headers } of urls) {
+    const r = await tryFetch(url, headers, 2);
+    if (r.html) return r;
+    if (r.rateLimited) anyRate = true;
+  }
+  return { html: null as string | null, rateLimited: anyRate };
 }
 
 function meta(html: string, prop: string): string | null {
