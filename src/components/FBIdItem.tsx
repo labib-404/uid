@@ -1,7 +1,7 @@
 import { useState, memo } from "react";
 import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
- Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, UserPlus, Instagram,
+ Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, UserPlus, Instagram, Loader2, AlertTriangle, Clock,
 } from "lucide-react";
 import { FBId, TAGS, TAG_COLORS, Tag } from "@/types/fbid";
 import { Button } from "@/components/ui/button";
@@ -243,6 +243,31 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
               {item.tag && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${TAG_COLORS[item.tag as Tag] || ""}`}>
                   {item.tag}
+                </span>
+              )}
+              {item.fetch_status === "pending" && (
+                <span title="Fetching…" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-400 border-blue-500/30">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" /> Fetching
+                </span>
+              )}
+              {item.fetch_status === "retrying" && (
+                <span title={`Retrying (attempt ${item.fetch_attempts ?? 2})`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Retry
+                </span>
+              )}
+              {item.fetch_status === "rate_limited" && (
+                <span title="Rate limited by Facebook" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-orange-500/10 text-orange-400 border-orange-500/30">
+                  <Clock className="w-2.5 h-2.5" /> Limited
+                </span>
+              )}
+              {item.fetch_status === "failed" && (
+                <span title="Fetch failed — tap refresh to retry" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  <AlertTriangle className="w-2.5 h-2.5" /> Failed
+                </span>
+              )}
+              {item.fetch_status === "done" && (
+                <span title="Fetched successfully" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                  <Check className="w-2.5 h-2.5" /> Done
                 </span>
               )}
             </div>
