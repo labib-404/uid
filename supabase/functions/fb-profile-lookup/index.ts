@@ -88,7 +88,12 @@ function parseProfile(html: string, uid: string) {
   const ogUrl = meta(html, "og:url") ?? "";
   let username: string | null = null;
   const um = ogUrl.match(/facebook\.com\/([^/?]+)/);
-  if (um && um[1] !== "profile.php") username = um[1];
+  if (um && um[1] !== "profile.php" && um[1] !== "people") username = um[1];
+  // Handle /people/Name/<id> URLs — extract the slug after /people/
+  if (!username) {
+    const pm = ogUrl.match(/facebook\.com\/people\/([^/?]+)/);
+    if (pm) username = decodeURIComponent(pm[1]).replace(/[^a-zA-Z0-9_.]/g, "").slice(0, 30) || null;
+  }
 
   let userId = uid;
   const androidUrl = meta(html, "al:android:url") ?? "";
@@ -176,7 +181,7 @@ const IG_HEADERS: Record<string, string> = {
 };
 
 const IG_RESERVED = new Set([
-  "p","reel","reels","tv","stories","explore","accounts","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed","developer","press","jobs","blog","fragment",
+  "p","reel","reels","tv","stories","explore","accounts","web","login","signup","direct","ar","lite","challenge","graphql","static","legal","about","privacy","help","api","oauth","embed","developer","press","jobs","blog","fragment","people","profile","pages","groups","watch","marketplace","gaming","events",
 ]);
 
 type IgCheck = { exists: boolean; rateLimited?: boolean };
