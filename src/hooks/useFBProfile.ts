@@ -16,6 +16,9 @@ type ProfileResult = {
   error?: string;
 };
 
+// Module-level lock to ensure same UID is not fetched concurrently across calls.
+const FETCH_LOCKS = new Set<string>();
+
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
   const [igProgress, setIgProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
@@ -30,25 +33,59 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
 
   const fetchProfiles = useCallback(
     async (uids: string[]) => {
-      const list = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean))).slice(0, 20);
+      const requested = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean)));
+      const skipped = requested.filter((u) => FETCH_LOCKS.has(u));
+      const list = requested.filter((u) => !FETCH_LOCKS.has(u)).slice(0, 20);
+      if (skipped.length) toast.message(`${skipped.length} already fetching — skipped`);
       if (!list.length) return;
+      list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
       const listSet = new Set(list);
       bumpStart(list.length);
-      setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: true } : p)));
-      try {
+      setItems((prev) =>
+        prev.map((p) =>
+          listSet.has(p.uid)
+            ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: (p.fetch_attempts ?? 0) + 1 }
+            : p
+        )
+      );
+      const runOnce = async (force = false) => {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
-          body: { uids: list },
+          body: { uids: list, force },
         });
         if (error) throw error;
-        const results = (data?.results ?? {}) as Record<string, ProfileResult>;
+        return (data?.results ?? {}) as Record<string, ProfileResult>;
+      };
+      try {
+        let results = await runOnce(false);
+        // Auto-retry UIDs that failed (not rate-limited)
+        const failedUids = list.filter((u) => {
+          const r = results[u];
+          return !r || (r.error && r.error !== "rate_limited");
+        });
+        if (failedUids.length) {
+          setItems((prev) =>
+            prev.map((p) => (failedUids.includes(p.uid) ? { ...p, fetch_status: "retrying" } : p))
+          );
+          await new Promise((r) => setTimeout(r, 1200));
+          const retry = await supabase.functions.invoke("fb-profile-lookup", {
+            body: { uids: failedUids, force: true },
+          });
+          if (!retry.error) {
+            const retryResults = (retry.data?.results ?? {}) as Record<string, ProfileResult>;
+            results = { ...results, ...retryResults };
+          }
+        }
         let okCount = 0;
         let failCount = 0;
         setItems((prev) =>
           prev.map((p) => {
             const r = results[p.uid];
-            if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false } : p;
-            if (r.error) { failCount++; return { ...p, instagram_checking: false }; }
+            if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p;
+            if (r.error) {
+              failCount++;
+              return { ...p, instagram_checking: false, fetch_status: r.error === "rate_limited" ? "rate_limited" : "failed" };
+            }
             okCount++;
             return {
               ...p,
@@ -63,6 +100,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               instagram_checked_at: new Date().toISOString(),
               instagram_checking: false,
               profile_fetched_at: new Date().toISOString(),
+              fetch_status: "done",
             };
           })
         );
@@ -70,8 +108,11 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         if (failCount) toast.error(`${failCount} not found / rate limited`);
       } catch (e: any) {
         toast.error(e?.message ?? "Fetch failed");
-        setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
+        setItems((prev) =>
+          prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p))
+        );
       } finally {
+        list.forEach((u) => FETCH_LOCKS.delete(u));
         bumpEnd(list.length);
         setLoading(false);
       }
