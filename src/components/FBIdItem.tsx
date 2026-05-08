@@ -1,7 +1,7 @@
 import { useState, memo } from "react";
 import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import {
-  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, Instagram,
+ Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, UserPlus, Instagram,
 } from "lucide-react";
 import { FBId, TAGS, TAG_COLORS, Tag } from "@/types/fbid";
 import { Button } from "@/components/ui/button";
@@ -173,6 +173,11 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                 {item.follower_count && (
                   <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0">
                     <Users className="w-3 h-3" /> {formatCount(item.follower_count)}
+                  </span>
+                )}
+                {item.friend_count && (
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-0.5 shrink-0">
+                    <UserPlus className="w-3 h-3" /> {formatCount(item.friend_count)}
                   </span>
                 )}
                 <button onClick={() => copy(item.real_name!, "Name")} className="text-muted-foreground hover:text-foreground shrink-0 ml-auto" title="Copy name">
