@@ -236,14 +236,20 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
-      <div className="border-b-2 border-foreground pb-3 -mt-1">
+      <div className="border-b-2 border-foreground pb-4 -mt-1">
         <div className="flex items-center justify-between">
-          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">§ 01 — Index</div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">{new Date().toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}</div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">§ 01 / Index</div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
+            {new Date().toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}
+          </div>
         </div>
-        <h1 className="font-display text-4xl mt-1 leading-none">
-          The <span className="italic text-primary">Ledger.</span>
+        <h1 className="font-display text-5xl mt-2 leading-[0.95]">
+          The <span className="italic text-primary">Ledger</span>,<br/>
+          <span className="text-muted-foreground">reimagined.</span>
         </h1>
+        <p className="text-xs text-muted-foreground mt-2 max-w-md">
+          Track, tag, and verify every account. Eight design modes — one click away.
+        </p>
       </div>
       {igProgress.total > 0 && (
         <div className="sticky top-0 z-30 -mx-1">
@@ -268,15 +274,18 @@ export default function Home() {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {stats.map((s, i) => (
           <div
             key={s.label}
-            className="brutal p-3 text-left transition-all hover:-translate-y-0.5 hover:translate-x-0.5 hover:shadow-glow relative"
+            className="brutal p-3 text-left transition-all hover:-translate-y-0.5 hover:translate-x-0.5 relative overflow-hidden group"
           >
             <div className="absolute top-1.5 right-2 text-[8px] font-mono text-muted-foreground">0{i + 1}</div>
-            <div className={`font-display text-3xl tabular-nums leading-none ${s.color}`}>{s.val}</div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-2 font-mono">{s.label}</div>
+            <div className="absolute -bottom-4 -right-4 text-7xl font-display italic text-foreground/[0.04] leading-none select-none pointer-events-none">
+              {s.val}
+            </div>
+            <div className={`font-display text-4xl tabular-nums leading-none relative ${s.color}`}>{s.val}</div>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-3 font-mono relative">{s.label}</div>
           </div>
         ))}
       </div>
