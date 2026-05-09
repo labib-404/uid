@@ -154,15 +154,17 @@
   * { @apply border-border; }
   html, body { @apply bg-background text-foreground; }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "cv11";
     -webkit-tap-highlight-color: transparent;
   }
   h1, h2, h3, h4 {
-    font-family: 'Syne', system-ui, sans-serif;
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    font-family: 'Instrument Serif', 'Syne', serif;
+    letter-spacing: -0.01em;
+    font-weight: 400;
   }
-  .font-display { font-family: 'Syne', system-ui, sans-serif; letter-spacing: -0.02em; font-weight: 700; }
+  .font-display { font-family: 'Instrument Serif', 'Syne', serif; letter-spacing: -0.01em; font-weight: 400; }
+  .font-display-bold { font-family: 'Syne', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 700; }
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 }
 
