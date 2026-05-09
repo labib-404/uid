@@ -63,7 +63,7 @@ export default function Home() {
   const retryTimersRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
-    const MAX = 12;
+    const MAX = 15;
     const isIncomplete = (i: typeof items[number]) =>
       !i.real_name || !i.username || !i.photo_url || !i.follower_count;
     const isComplete = (i: typeof items[number]) =>
@@ -83,8 +83,8 @@ export default function Home() {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
-      // Exponential backoff: 3s, 6s, 12s, 24s … capped at 5min
-      const delay = Math.min(3000 * Math.pow(2, tries), 300_000);
+      // Exponential backoff: 2s, 4s, 8s, 16s … capped at 5min
+      const delay = Math.min(2000 * Math.pow(2, tries), 300_000);
       const timer = window.setTimeout(() => {
         retryTimersRef.current.delete(it.uid);
         retryCountsRef.current.set(it.uid, tries + 1);
@@ -300,19 +300,10 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
-      <div className="border-b-2 border-foreground pb-4 -mt-1">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">§ 01 / Index</div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
-            {new Date().toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}
-          </div>
-        </div>
-        <h1 className="font-display text-5xl mt-2 leading-[0.95]">
-          The <span className="italic text-primary">Ledger</span>,<br/>
-          <span className="text-muted-foreground">reimagined.</span>
-        </h1>
-        <p className="text-xs text-muted-foreground mt-2 max-w-md">
-          Track, tag, and verify every account. Eight design modes — one click away.
+      <div className="border-b border-border pb-3">
+        <h1 className="text-2xl font-semibold">Home</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          {items.length} item{items.length === 1 ? "" : "s"} · track, tag and verify accounts
         </p>
       </div>
       {igProgress.total > 0 && (
@@ -320,16 +311,16 @@ export default function Home() {
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
               <RefreshCw className="w-3 h-3 animate-spin text-primary" />
-              <span className="font-mono uppercase tracking-wider text-[10px] text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 Sync · {igProgress.done}/{igProgress.total} · {igProgress.total - igProgress.done} left
               </span>
-              <div className="ml-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-                <span className="text-muted-foreground">⏳ {igProgress.processing}</span>
-                <span className="text-primary">✓ {igProgress.success}</span>
-                <span className="text-destructive">✗ {igProgress.failed}</span>
+              <div className="ml-auto flex items-center gap-2 text-[11px]">
+                <span className="text-muted-foreground">{igProgress.processing} pending</span>
+                <span className="text-accent">{igProgress.success} ok</span>
+                <span className="text-destructive">{igProgress.failed} fail</span>
               </div>
             </div>
-            <div className="w-full h-1.5 bg-muted border border-foreground overflow-hidden">
+            <div className="w-full h-1.5 bg-muted rounded overflow-hidden">
               <div
                 className="h-full bg-primary transition-all"
                 style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
@@ -339,17 +330,10 @@ export default function Home() {
         </div>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {stats.map((s, i) => (
-          <div
-            key={s.label}
-            className="brutal p-3 text-left transition-all hover:-translate-y-0.5 hover:translate-x-0.5 relative overflow-hidden group"
-          >
-            <div className="absolute top-1.5 right-2 text-[8px] font-mono text-muted-foreground">0{i + 1}</div>
-            <div className="absolute -bottom-4 -right-4 text-7xl font-display italic text-foreground/[0.04] leading-none select-none pointer-events-none">
-              {s.val}
-            </div>
-            <div className={`font-display text-4xl tabular-nums leading-none relative ${s.color}`}>{s.val}</div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-3 font-mono relative">{s.label}</div>
+        {stats.map((s) => (
+          <div key={s.label} className="brutal p-3 text-left">
+            <div className={`text-2xl font-semibold tabular-nums leading-none ${s.color}`}>{s.val}</div>
+            <div className="text-[11px] text-muted-foreground mt-1.5">{s.label}</div>
           </div>
         ))}
       </div>

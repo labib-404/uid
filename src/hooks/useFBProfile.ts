@@ -114,8 +114,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       let failCount = 0;
       try {
         let results = await runOnce(false);
-        // Auto-retry UIDs that failed (including rate-limited) — up to 3 retries with backoff
-        for (let attempt = 2; attempt <= 4; attempt++) {
+        // Auto-retry UIDs that failed (including rate-limited) — up to 4 retries with backoff
+        for (let attempt = 2; attempt <= 5; attempt++) {
           const failedUids = list.filter((u) => !hasUsefulProfileResult(results[u]));
           if (!failedUids.length) break;
           setItems((prev) =>
@@ -125,7 +125,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
                 : p
             )
           );
-          await new Promise((r) => setTimeout(r, 1200 * Math.pow(1.7, attempt - 2)));
+          await new Promise((r) => setTimeout(r, 1500 * Math.pow(1.8, attempt - 2)));
           try {
             const retry = await supabase.functions.invoke("fb-profile-lookup", {
               body: { uids: failedUids, force: true },
