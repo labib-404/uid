@@ -290,7 +290,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                 </span>
               )}
             </div>
-            {!compact && item.password && (
+            {item.password && (
               <div className="text-sm text-muted-foreground font-mono flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded bg-secondary border border-border/60 truncate max-w-[180px] text-foreground/90">
                   {item.password}
