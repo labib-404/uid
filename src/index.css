@@ -127,6 +127,98 @@
     --shadow-card: 3px 3px 0 0 hsl(210 50% 12%);
     --shadow-brutal: 6px 6px 0 0 hsl(210 50% 12%);
   }
+  .theme-vapor {
+    --background: 260 35% 8%;
+    --foreground: 280 30% 95%;
+    --card: 265 35% 12%;
+    --card-foreground: 280 30% 95%;
+    --popover: 265 35% 12%;
+    --popover-foreground: 280 30% 95%;
+    --primary: 290 90% 65%;
+    --primary-foreground: 260 35% 8%;
+    --secondary: 260 30% 18%;
+    --secondary-foreground: 280 30% 95%;
+    --muted: 260 25% 18%;
+    --muted-foreground: 280 15% 70%;
+    --accent: 180 90% 60%;
+    --accent-foreground: 260 35% 8%;
+    --destructive: 350 90% 60%;
+    --destructive-foreground: 280 30% 95%;
+    --border: 280 30% 25%;
+    --input: 280 30% 22%;
+    --ring: 290 90% 65%;
+    --shadow-card: 0 8px 30px hsl(290 90% 30% / 0.4);
+    --shadow-brutal: 0 20px 60px -10px hsl(180 90% 50% / 0.5);
+  }
+  .theme-forest {
+    --background: 130 20% 10%;
+    --foreground: 80 30% 92%;
+    --card: 130 22% 13%;
+    --card-foreground: 80 30% 92%;
+    --popover: 130 22% 13%;
+    --popover-foreground: 80 30% 92%;
+    --primary: 90 55% 55%;
+    --primary-foreground: 130 20% 10%;
+    --secondary: 130 18% 18%;
+    --secondary-foreground: 80 30% 92%;
+    --muted: 130 15% 18%;
+    --muted-foreground: 90 12% 65%;
+    --accent: 35 70% 60%;
+    --accent-foreground: 130 20% 10%;
+    --destructive: 5 70% 50%;
+    --destructive-foreground: 80 30% 92%;
+    --border: 130 18% 22%;
+    --input: 130 18% 20%;
+    --ring: 90 55% 55%;
+    --shadow-card: 0 4px 20px hsl(130 30% 5% / 0.6);
+    --shadow-brutal: 4px 4px 0 0 hsl(90 55% 55%);
+  }
+  .theme-sunset {
+    --background: 20 80% 96%;
+    --foreground: 15 40% 12%;
+    --card: 25 100% 99%;
+    --card-foreground: 15 40% 12%;
+    --popover: 25 100% 99%;
+    --popover-foreground: 15 40% 12%;
+    --primary: 12 90% 55%;
+    --primary-foreground: 25 100% 99%;
+    --secondary: 25 60% 90%;
+    --secondary-foreground: 15 40% 12%;
+    --muted: 25 50% 90%;
+    --muted-foreground: 15 20% 40%;
+    --accent: 330 85% 55%;
+    --accent-foreground: 25 100% 99%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 25 100% 99%;
+    --border: 20 40% 82%;
+    --input: 20 40% 82%;
+    --ring: 12 90% 55%;
+    --shadow-card: 4px 4px 0 0 hsl(15 40% 12%);
+    --shadow-brutal: 8px 8px 0 0 hsl(12 90% 55%);
+  }
+  .theme-mono {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 0 0% 8%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 8%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 0 0% 8%;
+    --shadow-card: 2px 2px 0 0 hsl(0 0% 8%);
+    --shadow-brutal: 4px 4px 0 0 hsl(0 0% 8%);
+  }
   .light {
     --background: 0 0% 100%;
     --foreground: 240 10% 4%;
@@ -154,15 +246,17 @@
   * { @apply border-border; }
   html, body { @apply bg-background text-foreground; }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "cv11";
     -webkit-tap-highlight-color: transparent;
   }
   h1, h2, h3, h4 {
-    font-family: 'Syne', system-ui, sans-serif;
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    font-family: 'Instrument Serif', 'Syne', serif;
+    letter-spacing: -0.01em;
+    font-weight: 400;
   }
-  .font-display { font-family: 'Syne', system-ui, sans-serif; letter-spacing: -0.02em; font-weight: 700; }
+  .font-display { font-family: 'Instrument Serif', 'Syne', serif; letter-spacing: -0.01em; font-weight: 400; }
+  .font-display-bold { font-family: 'Syne', system-ui, sans-serif; letter-spacing: -0.03em; font-weight: 700; }
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 }
 

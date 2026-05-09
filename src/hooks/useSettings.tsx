@@ -3,13 +3,25 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 type FontSize = "sm" | "md" | "lg";
 type ViewMode = "full" | "compact";
 type Theme = "dark" | "light";
-export type DesignTheme = "paper" | "midnight" | "noir" | "ocean";
+export type DesignTheme =
+  | "paper"
+  | "midnight"
+  | "noir"
+  | "ocean"
+  | "vapor"
+  | "forest"
+  | "sunset"
+  | "mono";
 
 export const DESIGN_THEMES: { id: DesignTheme; label: string; swatch: string }[] = [
   { id: "paper",    label: "Paper",    swatch: "#c4654a" },
   { id: "midnight", label: "Midnight", swatch: "#2BE5A8" },
   { id: "noir",     label: "Noir",     swatch: "#d4a838" },
   { id: "ocean",    label: "Ocean",    swatch: "#1e88c4" },
+  { id: "vapor",    label: "Vapor",    swatch: "#c084fc" },
+  { id: "forest",   label: "Forest",   swatch: "#84cc16" },
+  { id: "sunset",   label: "Sunset",   swatch: "#f97316" },
+  { id: "mono",     label: "Mono",     swatch: "#171717" },
 ];
 
 export type Palette = {
@@ -109,9 +121,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("designTheme", designTheme);
     const root = document.documentElement;
-    ["theme-paper", "theme-midnight", "theme-noir", "theme-ocean"].forEach((c) =>
-      root.classList.remove(c)
-    );
+    [
+      "theme-paper",
+      "theme-midnight",
+      "theme-noir",
+      "theme-ocean",
+      "theme-vapor",
+      "theme-forest",
+      "theme-sunset",
+      "theme-mono",
+    ].forEach((c) => root.classList.remove(c));
     if (designTheme !== "paper") root.classList.add(`theme-${designTheme}`);
   }, [designTheme]);
   useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
