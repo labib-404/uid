@@ -35,6 +35,13 @@ export function unlockUid(uid: string) {
   COMPLETE_LOCKS.delete(uid);
   persistCompletes();
 }
+export function lockUidsComplete(uids: string[]) {
+  let changed = false;
+  for (const u of uids) {
+    if (u && !COMPLETE_LOCKS.has(u)) { COMPLETE_LOCKS.add(u); changed = true; }
+  }
+  if (changed) persistCompletes();
+}
 
 function hasUsefulProfileResult(result?: ProfileResult | null) {
   if (!result || result.error) return false;
