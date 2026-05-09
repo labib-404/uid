@@ -226,6 +226,20 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                     <RefreshCw className="w-3 h-3" />
                   </button>
                 )}
+                {!item.instagram_checking && item.instagram_verify_status && (
+                  <span
+                    title={`${item.instagram_verify_reason ?? ""}${item.instagram_checked_at ? ` · ${new Date(item.instagram_checked_at).toLocaleString()}` : ""}`}
+                    className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider border ${
+                      item.instagram_verify_status === "success"
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                        : item.instagram_verify_status === "rate_limited"
+                        ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                        : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                    }`}
+                  >
+                    {item.instagram_verify_status === "success" ? "OK" : item.instagram_verify_status === "rate_limited" ? "Limit" : "Fail"}
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1.5 flex-wrap">
