@@ -60,12 +60,22 @@ export default function Import() {
     setText("");
     nav("/");
 
-    // Auto-fetch profiles in background, in chunks of 20
+    // Auto-fetch profiles in background — 2 concurrent batches of 50.
     (async () => {
       const uids = newItems.map((i) => i.uid);
-      for (let i = 0; i < uids.length; i += 50) {
-        await fetchProfiles(uids.slice(i, i + 50));
-      }
+      const BATCH = 50;
+      const PARALLEL = 2;
+      const batches: string[][] = [];
+      for (let i = 0; i < uids.length; i += BATCH) batches.push(uids.slice(i, i + BATCH));
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < batches.length) {
+          const idx = cursor++;
+          if (idx >= batches.length) break;
+          await fetchProfiles(batches[idx]);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(PARALLEL, batches.length) }, worker));
     })();
   };
 

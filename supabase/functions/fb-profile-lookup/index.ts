@@ -373,8 +373,11 @@ Deno.serve(async (req) => {
     }
 
     const results: Record<string, any> = {};
-    await Promise.all(
-      uids.map(async (uid) => {
+    // Limit concurrency to avoid Facebook rate-limiting on large batches.
+    const CONCURRENCY = 6;
+    const queue = [...uids];
+    const workers: Promise<void>[] = [];
+    const processOne = async (uid: string) => {
         const cleanUid = String(uid).trim();
         if (!cleanUid) return;
         if (igOnly) {
@@ -415,8 +418,16 @@ Deno.serve(async (req) => {
         }
         data.instagramUsername = verifiedIg;
         results[cleanUid] = { ...data, instagramRateLimited: igRate };
-      })
-    );
+    };
+    const worker = async () => {
+      while (queue.length) {
+        const u = queue.shift();
+        if (u === undefined) break;
+        await processOne(u);
+      }
+    };
+    for (let i = 0; i < Math.min(CONCURRENCY, uids.length); i++) workers.push(worker());
+    await Promise.all(workers);
 
     return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

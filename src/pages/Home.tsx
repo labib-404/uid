@@ -46,23 +46,30 @@ export default function Home() {
 
   useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
-  // Auto-retry failed/rate-limited UIDs with exponential backoff.
-  // Cap per-UID at 8 retries (tracked in a ref so it survives re-renders
-  // without resetting when the hook re-keys fetch_attempts).
+  // Auto-retry failed/rate-limited/never-fetched/incomplete UIDs.
+  // Per-UID cap at 12 retries with exponential backoff.
   const retryCountsRef = useRef<Map<string, number>>(new Map());
   const retryTimersRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
-    const MAX = 8;
-    const candidates = items.filter(
-      (i) => i.fetch_status === "failed" || i.fetch_status === "rate_limited"
-    );
-    for (const it of candidates) {
+    const MAX = 12;
+    const isIncomplete = (i: typeof items[number]) =>
+      !i.real_name && !i.username && !i.photo_url;
+    const candidates = items.filter((i) => {
+      if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") return false;
+      if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") return true;
+      // Never fetched or fetched but missing core fields → re-queue
+      if (!i.fetch_status && isIncomplete(i)) return true;
+      if (i.fetch_status === "done" && isIncomplete(i)) return true;
+      return false;
+    });
+    // Batch up to 50 candidates per scheduling tick to avoid flooding
+    for (const it of candidates.slice(0, 200)) {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
-      // Exponential backoff: 5s, 10s, 20s, 40s, 80s, 160s, 320s, 600s cap
-      const delay = Math.min(5000 * Math.pow(2, tries), 600_000);
+      // Exponential backoff: 3s, 6s, 12s, 24s … capped at 5min
+      const delay = Math.min(3000 * Math.pow(2, tries), 300_000);
       const timer = window.setTimeout(() => {
         retryTimersRef.current.delete(it.uid);
         retryCountsRef.current.set(it.uid, tries + 1);
@@ -70,9 +77,13 @@ export default function Home() {
       }, delay);
       retryTimersRef.current.set(it.uid, timer);
     }
-    // Clear retry counter for UIDs that have succeeded
+    // Clear retry counter for UIDs that have succeeded with usable data
     for (const it of items) {
-      if (it.fetch_status === "done" && retryCountsRef.current.has(it.uid)) {
+      if (
+        it.fetch_status === "done" &&
+        (it.real_name || it.username || it.photo_url) &&
+        retryCountsRef.current.has(it.uid)
+      ) {
         retryCountsRef.current.delete(it.uid);
       }
     }
