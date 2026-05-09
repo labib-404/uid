@@ -141,11 +141,15 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         setItems((prev) =>
           prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p))
         );
-      } finally {
+        bumpEnd(list.length, 0, list.length);
         list.forEach((u) => FETCH_LOCKS.delete(u));
-        bumpEnd(list.length);
         setLoading(false);
+        return;
+      } finally {
       }
+      list.forEach((u) => FETCH_LOCKS.delete(u));
+      bumpEnd(list.length, okCount, failCount);
+      setLoading(false);
     },
     [setItems]
   );
