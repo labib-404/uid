@@ -61,7 +61,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
     async (uids: string[]) => {
       const requested = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean)));
       const skipped = requested.filter((u) => FETCH_LOCKS.has(u));
-      const list = requested.filter((u) => !FETCH_LOCKS.has(u)).slice(0, 20);
+      const list = requested.filter((u) => !FETCH_LOCKS.has(u)).slice(0, 50);
       if (skipped.length) toast.message(`${skipped.length} already fetching — skipped`);
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
@@ -84,23 +84,27 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       };
       try {
         let results = await runOnce(false);
-        // Auto-retry UIDs that failed (not rate-limited)
-        const failedUids = list.filter((u) => {
-          const r = results[u];
-          return !hasUsefulProfileResult(r) && r?.error !== "rate_limited";
-        });
-        if (failedUids.length) {
+        // Auto-retry UIDs that failed (including rate-limited) — up to 3 retries with backoff
+        for (let attempt = 2; attempt <= 4; attempt++) {
+          const failedUids = list.filter((u) => !hasUsefulProfileResult(results[u]));
+          if (!failedUids.length) break;
           setItems((prev) =>
-            prev.map((p) => (failedUids.includes(p.uid) ? { ...p, fetch_status: "retrying", fetch_attempts: 2 } : p))
+            prev.map((p) =>
+              failedUids.includes(p.uid)
+                ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
+                : p
+            )
           );
-          await new Promise((r) => setTimeout(r, 1200));
-          const retry = await supabase.functions.invoke("fb-profile-lookup", {
-            body: { uids: failedUids, force: true },
-          });
-          if (!retry.error) {
-            const retryResults = (retry.data?.results ?? {}) as Record<string, ProfileResult>;
-            results = { ...results, ...retryResults };
-          }
+          await new Promise((r) => setTimeout(r, 1200 * Math.pow(1.7, attempt - 2)));
+          try {
+            const retry = await supabase.functions.invoke("fb-profile-lookup", {
+              body: { uids: failedUids, force: true },
+            });
+            if (!retry.error) {
+              const retryResults = (retry.data?.results ?? {}) as Record<string, ProfileResult>;
+              results = { ...results, ...retryResults };
+            }
+          } catch { /* keep retrying */ }
         }
         let okCount = 0;
         let failCount = 0;
