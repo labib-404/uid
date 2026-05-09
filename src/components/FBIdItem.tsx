@@ -279,6 +279,11 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                   <AlertTriangle className="w-2.5 h-2.5" /> Failed · {item.fetch_attempts ?? 1}×
                 </span>
               )}
+              {item.fetch_status === "not_found" && (
+                <span title={`Profile not found${item.fetch_error ? ` — ${item.fetch_error}` : ""} — auto-retries reduced`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-zinc-500/10 text-zinc-400 border-zinc-500/30">
+                  <AlertTriangle className="w-2.5 h-2.5" /> Not found
+                </span>
+              )}
               {item.fetch_status === "done" && (
                 <span title={`Fetched successfully${(item.fetch_attempts ?? 1) > 1 ? ` after ${item.fetch_attempts} attempts` : ""}${item.profile_fetched_at ? ` · ${new Date(item.profile_fetched_at).toLocaleString()}` : ""}`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                   <Check className="w-2.5 h-2.5" /> Done{(item.fetch_attempts ?? 1) > 1 ? ` · ${item.fetch_attempts}×` : ""}
