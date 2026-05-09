@@ -30,7 +30,7 @@ type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 export default function Home() {
   const { items, setItems, loading } = useFBIds();
   const { fetchProfiles, recheckInstagram, loading: fetching, igProgress } = useFBProfile(setItems);
-  const { viewMode } = useSettings();
+  const { viewMode, autoRetry } = useSettings();
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   useEffect(() => {
@@ -46,8 +46,46 @@ export default function Home() {
 
   useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
-  // Auto-fetch and background IG re-check are intentionally disabled to keep
-  // the app fast. Use the "Fetch missing" button or per-row fetch instead.
+  // Auto-retry failed/rate-limited UIDs with exponential backoff.
+  // Cap per-UID at 8 retries (tracked in a ref so it survives re-renders
+  // without resetting when the hook re-keys fetch_attempts).
+  const retryCountsRef = useRef<Map<string, number>>(new Map());
+  const retryTimersRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!autoRetry) return;
+    const MAX = 8;
+    const candidates = items.filter(
+      (i) => i.fetch_status === "failed" || i.fetch_status === "rate_limited"
+    );
+    for (const it of candidates) {
+      if (retryTimersRef.current.has(it.uid)) continue;
+      const tries = retryCountsRef.current.get(it.uid) ?? 0;
+      if (tries >= MAX) continue;
+      // Exponential backoff: 5s, 10s, 20s, 40s, 80s, 160s, 320s, 600s cap
+      const delay = Math.min(5000 * Math.pow(2, tries), 600_000);
+      const timer = window.setTimeout(() => {
+        retryTimersRef.current.delete(it.uid);
+        retryCountsRef.current.set(it.uid, tries + 1);
+        fetchProfiles([it.uid]);
+      }, delay);
+      retryTimersRef.current.set(it.uid, timer);
+    }
+    // Clear retry counter for UIDs that have succeeded
+    for (const it of items) {
+      if (it.fetch_status === "done" && retryCountsRef.current.has(it.uid)) {
+        retryCountsRef.current.delete(it.uid);
+      }
+    }
+    return () => {
+      // do not clear timers on every render — only on unmount
+    };
+  }, [items, autoRetry, fetchProfiles]);
+  useEffect(() => {
+    return () => {
+      retryTimersRef.current.forEach((t) => clearTimeout(t));
+      retryTimersRef.current.clear();
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     let out = items;
@@ -257,7 +295,7 @@ export default function Home() {
             <div className="flex items-center gap-2 text-xs">
               <RefreshCw className="w-3 h-3 animate-spin text-primary" />
               <span className="font-mono uppercase tracking-wider text-[10px] text-muted-foreground">
-                IG verify · {igProgress.done}/{igProgress.total}
+                Sync · {igProgress.done}/{igProgress.total} · {igProgress.total - igProgress.done} left
               </span>
               <div className="ml-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
                 <span className="text-muted-foreground">⏳ {igProgress.processing}</span>
