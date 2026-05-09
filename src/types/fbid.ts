@@ -21,6 +21,8 @@ export type FBId = {
   instagram_checked_at?: string | null;
   fetch_status?: "pending" | "retrying" | "done" | "failed" | "rate_limited" | null;
   fetch_attempts?: number;
+  instagram_verify_status?: "success" | "failed" | "rate_limited" | null;
+  instagram_verify_reason?: string | null;
 };
 
 export const TAGS = ["VIP", "Hot", "New", "Done", "Skip"] as const;
