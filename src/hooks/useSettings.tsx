@@ -3,6 +3,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 type FontSize = "sm" | "md" | "lg";
 type ViewMode = "full" | "compact";
 type Theme = "dark" | "light";
+export type DesignTheme = "paper" | "midnight" | "noir" | "ocean";
+
+export const DESIGN_THEMES: { id: DesignTheme; label: string; swatch: string }[] = [
+  { id: "paper",    label: "Paper",    swatch: "#c4654a" },
+  { id: "midnight", label: "Midnight", swatch: "#2BE5A8" },
+  { id: "noir",     label: "Noir",     swatch: "#d4a838" },
+  { id: "ocean",    label: "Ocean",    swatch: "#1e88c4" },
+];
 
 export type Palette = {
   primary: string;   // hex
@@ -55,11 +63,13 @@ type Settings = {
   fontSize: FontSize;
   viewMode: ViewMode;
   theme: Theme;
+  designTheme: DesignTheme;
   swipeDelete: boolean;
   palette: Palette;
   setFontSize: (s: FontSize) => void;
   setViewMode: (v: ViewMode) => void;
   setTheme: (t: Theme) => void;
+  setDesignTheme: (d: DesignTheme) => void;
   setSwipeDelete: (b: boolean) => void;
   setPalette: (p: Palette) => void;
   resetPalette: () => void;
@@ -77,6 +87,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem("theme") as Theme) || "dark"
   );
+  const [designTheme, setDesignTheme] = useState<DesignTheme>(
+    () => (localStorage.getItem("designTheme") as DesignTheme) || "paper"
+  );
   const [swipeDelete, setSwipeDelete] = useState<boolean>(
     () => localStorage.getItem("swipeDelete") !== "false"
   );
@@ -93,6 +106,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("theme", theme);
     document.documentElement.classList.toggle("light", theme === "light");
   }, [theme]);
+  useEffect(() => {
+    localStorage.setItem("designTheme", designTheme);
+    const root = document.documentElement;
+    ["theme-paper", "theme-midnight", "theme-noir", "theme-ocean"].forEach((c) =>
+      root.classList.remove(c)
+    );
+    if (designTheme !== "paper") root.classList.add(`theme-${designTheme}`);
+  }, [designTheme]);
   useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
   useEffect(() => {
     localStorage.setItem("palette", JSON.stringify(palette));
@@ -100,7 +121,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [palette]);
 
   return (
-    <Ctx.Provider value={{ fontSize, viewMode, theme, swipeDelete, palette, setFontSize, setViewMode, setTheme, setSwipeDelete, setPalette, resetPalette: () => setPalette(DEFAULT_PALETTE) }}>
+    <Ctx.Provider value={{ fontSize, viewMode, theme, designTheme, swipeDelete, palette, setFontSize, setViewMode, setTheme, setDesignTheme, setSwipeDelete, setPalette, resetPalette: () => setPalette(DEFAULT_PALETTE) }}>
       {children}
     </Ctx.Provider>
   );
