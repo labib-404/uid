@@ -167,8 +167,31 @@ export default function Home() {
     );
   };
 
+  const retryFailedInstagram = () => {
+    const failed = items.filter(
+      (i) => i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited"
+    );
+    if (!failed.length) { toast("No failed IG items to retry"); return; }
+    recheckInstagram(
+      failed.map((i) => ({
+        uid: i.uid,
+        username: i.username,
+        instagram_username: i.instagram_username,
+      })),
+      true
+    );
+  };
+
   const igCandidatesCount = useMemo(
     () => items.filter((i) => i.username || i.instagram_username).length,
+    [items]
+  );
+
+  const failedIgCount = useMemo(
+    () =>
+      items.filter(
+        (i) => i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited"
+      ).length,
     [items]
   );
 
