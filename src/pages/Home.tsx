@@ -357,6 +357,16 @@ export default function Home() {
         <Button variant="outline" size="sm" onClick={() => setConfirmRecheck(true)} disabled={fetching || igProgress.total > 0}>
           <RefreshCw className={`w-4 h-4 mr-1 ${igProgress.total > 0 ? "animate-spin" : ""}`} /> Recheck IG
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={retryFailedInstagram}
+          disabled={fetching || igProgress.total > 0 || failedIgCount === 0}
+          title={`${failedIgCount} failed/rate-limited item(s)`}
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${igProgress.total > 0 ? "animate-spin" : ""}`} /> Retry failed
+          {failedIgCount > 0 && <span className="ml-1.5 text-[10px] bg-muted-foreground/20 rounded px-1">{failedIgCount}</span>}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-1" /> Export</Button>
