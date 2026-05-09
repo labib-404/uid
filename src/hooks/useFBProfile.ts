@@ -19,6 +19,30 @@ type ProfileResult = {
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 
+// Per-UID completion lock — once a profile has all core fields, skip re-fetch.
+// Persisted across the session in localStorage so it survives reloads.
+const COMPLETE_KEY = "fb_complete_uids_v1";
+const COMPLETE_LOCKS: Set<string> = (() => {
+  try {
+    const raw = localStorage.getItem(COMPLETE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch { return new Set(); }
+})();
+function persistCompletes() {
+  try { localStorage.setItem(COMPLETE_KEY, JSON.stringify([...COMPLETE_LOCKS])); } catch {}
+}
+export function unlockUid(uid: string) {
+  COMPLETE_LOCKS.delete(uid);
+  persistCompletes();
+}
+export function lockUidsComplete(uids: string[]) {
+  let changed = false;
+  for (const u of uids) {
+    if (u && !COMPLETE_LOCKS.has(u)) { COMPLETE_LOCKS.add(u); changed = true; }
+  }
+  if (changed) persistCompletes();
+}
+
 function hasUsefulProfileResult(result?: ProfileResult | null) {
   if (!result || result.error) return false;
   return Boolean(
@@ -61,8 +85,12 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
     async (uids: string[]) => {
       const requested = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean)));
       const skipped = requested.filter((u) => FETCH_LOCKS.has(u));
-      const list = requested.filter((u) => !FETCH_LOCKS.has(u)).slice(0, 50);
+      const lockedComplete = requested.filter((u) => !FETCH_LOCKS.has(u) && COMPLETE_LOCKS.has(u));
+      const list = requested
+        .filter((u) => !FETCH_LOCKS.has(u) && !COMPLETE_LOCKS.has(u))
+        .slice(0, 50);
       if (skipped.length) toast.message(`${skipped.length} already fetching — skipped`);
+      if (lockedComplete.length) toast.message(`${lockedComplete.length} already complete — locked`);
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
@@ -134,6 +162,15 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             };
           })
         );
+        // Persist completion lock for any UID that now has all 4 core fields.
+        for (const p of list) {
+          const r = results[p];
+          if (!r || r.error || !hasUsefulProfileResult(r)) continue;
+          if (r.name && r.username && r.photoUrl && r.followerCount) {
+            COMPLETE_LOCKS.add(p);
+          }
+        }
+        persistCompletes();
         if (okCount) toast.success(`Fetched ${okCount} profile${okCount > 1 ? "s" : ""}`);
         if (failCount) toast.error(`${failCount} not found / rate limited`);
       } catch (e: any) {
