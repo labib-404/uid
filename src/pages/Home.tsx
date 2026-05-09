@@ -11,6 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FBId } from "@/types/fbid";
 import { toast } from "sonner";
 
@@ -32,6 +42,7 @@ export default function Home() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [noteFor, setNoteFor] = useState<FBId | null>(null);
   const [visibleCount, setVisibleCount] = useState(50);
+  const [confirmRecheck, setConfirmRecheck] = useState(false);
 
   useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
@@ -156,6 +167,11 @@ export default function Home() {
     );
   };
 
+  const igCandidatesCount = useMemo(
+    () => items.filter((i) => i.username || i.instagram_username).length,
+    [items]
+  );
+
   const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
   const recheckOne = useCallback(
     (item: FBId) =>
@@ -208,12 +224,19 @@ export default function Home() {
       </div>
       {igProgress.total > 0 && (
         <div className="sticky top-0 z-30 -mx-1">
-          <div className="brutal px-3 py-1.5 flex items-center gap-2 text-xs">
-            <RefreshCw className="w-3 h-3 animate-spin text-primary" />
-            <span className="font-mono uppercase tracking-wider text-[10px] text-muted-foreground">
-              IG verify · {igProgress.done}/{igProgress.total}
-            </span>
-            <div className="ml-auto w-24 h-1.5 bg-muted border border-foreground overflow-hidden">
+          <div className="brutal px-3 py-2 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs">
+              <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+              <span className="font-mono uppercase tracking-wider text-[10px] text-muted-foreground">
+                IG verify · {igProgress.done}/{igProgress.total}
+              </span>
+              <div className="ml-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+                <span className="text-muted-foreground">⏳ {igProgress.processing}</span>
+                <span className="text-primary">✓ {igProgress.success}</span>
+                <span className="text-destructive">✗ {igProgress.failed}</span>
+              </div>
+            </div>
+            <div className="w-full h-1.5 bg-muted border border-foreground overflow-hidden">
               <div
                 className="h-full bg-primary transition-all"
                 style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
@@ -308,7 +331,7 @@ export default function Home() {
         <Button variant="outline" size="sm" onClick={fetchMissing} disabled={fetching}>
           <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Fetch missing
         </Button>
-        <Button variant="outline" size="sm" onClick={recheckAllInstagram} disabled={fetching || igProgress.total > 0}>
+        <Button variant="outline" size="sm" onClick={() => setConfirmRecheck(true)} disabled={fetching || igProgress.total > 0}>
           <RefreshCw className={`w-4 h-4 mr-1 ${igProgress.total > 0 ? "animate-spin" : ""}`} /> Recheck IG
         </Button>
         <DropdownMenu>
@@ -356,6 +379,29 @@ export default function Home() {
       )}
 
       <NoteDialog item={noteFor} onClose={() => setNoteFor(null)} onSaved={updateLocal} />
+
+      <AlertDialog open={confirmRecheck} onOpenChange={setConfirmRecheck}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Recheck Instagram for all?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will re-verify Instagram for {igCandidatesCount} item{igCandidatesCount === 1 ? "" : "s"} (max 20 per run).
+              It may take a while and can hit rate limits.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmRecheck(false);
+                recheckAllInstagram();
+              }}
+            >
+              Recheck
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
