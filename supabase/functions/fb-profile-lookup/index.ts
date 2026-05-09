@@ -68,12 +68,24 @@ async function fetchFb(uid: string) {
         { url: `https://mbasic.facebook.com/${uid}`, headers: MOBILE_HEADERS },
       ];
   let anyRate = false;
+  let anyNotFound = false;
   for (const { url, headers } of urls) {
     const r = await tryFetch(url, headers, 4);
-    if (r.html) return r;
+    if (r.html) {
+      // Detect FB's "page not found" / "content unavailable" interstitials inline.
+      if (
+        /This (?:page|content) isn['']?t available/i.test(r.html) ||
+        /Sorry, this page isn['']?t available/i.test(r.html) ||
+        /The link you followed may be broken/i.test(r.html)
+      ) {
+        anyNotFound = true;
+        continue;
+      }
+      return { html: r.html, rateLimited: false, notFound: false };
+    }
     if (r.rateLimited) anyRate = true;
   }
-  return { html: null as string | null, rateLimited: anyRate };
+  return { html: null as string | null, rateLimited: anyRate, notFound: anyNotFound && !anyRate };
 }
 
 function meta(html: string, prop: string): string | null {
@@ -268,22 +280,24 @@ function extractMetaRaw(html: string) {
   };
 }
 
-async function getFbProfile(uid: string, force = false): Promise<{ entry: FbCacheEntry | null; rateLimited: boolean }> {
+async function getFbProfile(uid: string, force = false): Promise<{ entry: FbCacheEntry | null; rateLimited: boolean; notFound: boolean }> {
   const key = uid.toLowerCase();
   const now = Date.now();
   if (!force) {
     const cached = FB_CACHE.get(key);
-    if (cached && now - cached.at < FB_TTL) return { entry: cached, rateLimited: false };
+    if (cached && now - cached.at < FB_TTL) return { entry: cached, rateLimited: false, notFound: false };
   }
   const inflight = FB_INFLIGHT.get(key);
   if (inflight) {
     const entry = await inflight;
-    return { entry, rateLimited: false };
+    return { entry, rateLimited: false, notFound: false };
   }
   let rateLimited = false;
+  let notFound = false;
   const p: Promise<FbCacheEntry | null> = (async () => {
-    const { html, rateLimited: rl } = await fetchFb(uid);
+    const { html, rateLimited: rl, notFound: nf } = await fetchFb(uid);
     if (rl) { rateLimited = true; return null; }
+    if (nf) { notFound = true; return null; }
     if (!html) return null;
     const parsed = parseProfile(html, uid);
     const metaRaw = extractMetaRaw(html);
@@ -300,7 +314,7 @@ async function getFbProfile(uid: string, force = false): Promise<{ entry: FbCach
   FB_INFLIGHT.set(key, p);
   try {
     const entry = await p;
-    return { entry, rateLimited };
+    return { entry, rateLimited, notFound };
   } finally {
     FB_INFLIGHT.delete(key);
   }
@@ -394,13 +408,17 @@ Deno.serve(async (req) => {
           results[cleanUid] = { instagramUsername: verified, instagramRateLimited: rate };
           return;
         }
-        const { entry, rateLimited } = await getFbProfile(cleanUid, !!force);
+        const { entry, rateLimited, notFound } = await getFbProfile(cleanUid, !!force);
         if (rateLimited) {
           results[cleanUid] = { error: "rate_limited" };
           return;
         }
-        if (!entry) {
+        if (notFound) {
           results[cleanUid] = { error: "not_found" };
+          return;
+        }
+        if (!entry) {
+          results[cleanUid] = { error: "no_data" };
           return;
         }
         const data = { ...entry.parsed };
