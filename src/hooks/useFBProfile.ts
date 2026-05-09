@@ -33,14 +33,28 @@ function hasUsefulProfileResult(result?: ProfileResult | null) {
 
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
-  const [igProgress, setIgProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+  const [igProgress, setIgProgress] = useState<{
+    done: number;
+    total: number;
+    processing: number;
+    success: number;
+    failed: number;
+  }>({ done: 0, total: 0, processing: 0, success: 0, failed: 0 });
 
   const bumpStart = (n: number) =>
-    setIgProgress((p) => ({ done: p.done, total: p.total + n }));
-  const bumpEnd = (n: number) =>
+    setIgProgress((p) => ({ ...p, total: p.total + n, processing: p.processing + n }));
+  const bumpEnd = (n: number, ok = 0, fail = 0) =>
     setIgProgress((p) => {
-      const next = { done: p.done + n, total: p.total };
-      return next.done >= next.total ? { done: 0, total: 0 } : next;
+      const next = {
+        ...p,
+        done: p.done + n,
+        processing: Math.max(0, p.processing - n),
+        success: p.success + ok,
+        failed: p.failed + fail,
+      };
+      return next.done >= next.total
+        ? { done: 0, total: 0, processing: 0, success: 0, failed: 0 }
+        : next;
     });
 
   const fetchProfiles = useCallback(
@@ -153,26 +167,51 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         if (error) throw error;
         const results = (data?.results ?? {}) as Record<string, ProfileResult>;
         let rateCount = 0;
+        let okCount = 0;
+        let failCount = 0;
         setItems((prev) =>
           prev.map((p) => {
             const r = results[p.uid];
             if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false } : p;
-            if (r.instagramRateLimited) rateCount++;
+            let status: "success" | "failed" | "rate_limited";
+            let reason: string;
+            if (r.instagramRateLimited) {
+              status = "rate_limited";
+              reason = "Instagram rate-limited";
+              rateCount++;
+              failCount++;
+            } else if (r.instagramUsername) {
+              status = "success";
+              reason = `Verified @${r.instagramUsername}`;
+              okCount++;
+            } else {
+              status = "failed";
+              reason = r.error ? `Error: ${r.error}` : "No matching Instagram account";
+              failCount++;
+            }
             return {
               ...p,
               instagram_username: r.instagramUsername ?? null,
               instagram_rate_limited: !!r.instagramRateLimited,
               instagram_checked_at: new Date().toISOString(),
               instagram_checking: false,
+              instagram_verify_status: status,
+              instagram_verify_reason: reason,
             };
           })
         );
+        if (okCount) toast.success(`IG verified: ${okCount}`);
         if (rateCount) toast.error(`Instagram rate-limited on ${rateCount}`);
+        else if (failCount) toast.error(`IG failed: ${failCount}`);
+        bumpEnd(list.length, okCount, failCount);
+        return;
       } catch (e: any) {
         toast.error(e?.message ?? "Re-check failed");
         setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
+        bumpEnd(list.length, 0, list.length);
+        return;
       } finally {
-        bumpEnd(list.length);
+        // counts handled in try/catch
       }
     },
     [setItems]
