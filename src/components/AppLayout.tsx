@@ -99,6 +99,16 @@ export default function AppLayout() {
                     )}
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => { setPreviewTheme(null); setDesignTheme("paper"); }}
+                  onMouseEnter={() => setPreviewTheme("paper")}
+                  onFocus={() => setPreviewTheme("paper")}
+                  className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider"
+                >
+                  <span className="w-3.5 h-3.5 rounded-full border border-foreground/30 shrink-0 bg-[#c4654a]" />
+                  <span>Reset to Paper</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <button
