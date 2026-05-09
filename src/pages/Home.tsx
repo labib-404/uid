@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
-import { useFBProfile, unlockUid } from "@/hooks/useFBProfile";
+import { useFBProfile, unlockUid, lockUidsComplete } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
 import FBIdItem from "@/components/FBIdItem";
 import NoteDialog from "@/components/NoteDialog";
@@ -37,14 +37,10 @@ export default function Home() {
   useEffect(() => {
     if (seededRef.current || !items.length) return;
     seededRef.current = true;
-    try {
-      const raw = localStorage.getItem("fb_complete_uids_v1");
-      const set = new Set<string>(raw ? JSON.parse(raw) : []);
-      for (const i of items) {
-        if (i.real_name && i.username && i.photo_url && i.follower_count) set.add(i.uid);
-      }
-      localStorage.setItem("fb_complete_uids_v1", JSON.stringify([...set]));
-    } catch { /* ignore */ }
+    const completeUids = items
+      .filter((i) => i.real_name && i.username && i.photo_url && i.follower_count)
+      .map((i) => i.uid);
+    if (completeUids.length) lockUidsComplete(completeUids);
   }, [items]);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
