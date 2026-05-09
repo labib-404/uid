@@ -19,8 +19,10 @@ export type FBId = {
   instagram_checking?: boolean;
   instagram_rate_limited?: boolean;
   instagram_checked_at?: string | null;
-  fetch_status?: "pending" | "retrying" | "done" | "failed" | "rate_limited" | null;
+  fetch_status?: "pending" | "retrying" | "done" | "failed" | "rate_limited" | "not_found" | null;
   fetch_attempts?: number;
+  fetch_error?: string | null;
+  fetch_last_attempt_at?: string | null;
   instagram_verify_status?: "success" | "failed" | "rate_limited" | null;
   instagram_verify_reason?: string | null;
 };

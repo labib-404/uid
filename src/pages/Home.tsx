@@ -64,14 +64,25 @@ export default function Home() {
   useEffect(() => {
     if (!autoRetry) return;
     const MAX = 15;
+    const NOT_FOUND_MAX = 3; // give up quickly on profiles that look truly missing
+    const COOLDOWN_MS = 30_000; // never re-attempt a UID more than once per 30s
     const isIncomplete = (i: typeof items[number]) =>
       !i.real_name || !i.username || !i.photo_url || !i.follower_count;
     const isComplete = (i: typeof items[number]) =>
       !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
+    const now = Date.now();
     const candidates = items.filter((i) => {
       if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") return false;
       // LOCK: once a UID has full data (name + username + photo + followers), never re-fetch.
       if (isComplete(i)) return false;
+      // Cooldown: don't hammer a UID we just tried.
+      if (i.fetch_last_attempt_at && now - new Date(i.fetch_last_attempt_at).getTime() < COOLDOWN_MS) return false;
+      // Cap not_found retries — these are usually permanently missing.
+      if (i.fetch_status === "not_found") {
+        const tries = retryCountsRef.current.get(i.uid) ?? 0;
+        if (tries >= NOT_FOUND_MAX) return false;
+        return true;
+      }
       if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") return true;
       // Never fetched or fetched but missing core fields → re-queue
       if (!i.fetch_status && isIncomplete(i)) return true;
@@ -83,8 +94,14 @@ export default function Home() {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
-      // Exponential backoff: 2s, 4s, 8s, 16s … capped at 5min
-      const delay = Math.min(2000 * Math.pow(2, tries), 300_000);
+      // Status-aware backoff:
+      //  - rate_limited: longer (start 15s, cap 10min) — give FB time to forgive us
+      //  - not_found:    longer (start 60s, cap 15min) — likely permanent
+      //  - other:        normal (2s → 5min)
+      let delay: number;
+      if (it.fetch_status === "rate_limited") delay = Math.min(15_000 * Math.pow(1.8, tries), 600_000);
+      else if (it.fetch_status === "not_found") delay = Math.min(60_000 * Math.pow(2, tries), 900_000);
+      else delay = Math.min(2000 * Math.pow(2, tries), 300_000);
       const timer = window.setTimeout(() => {
         retryTimersRef.current.delete(it.uid);
         retryCountsRef.current.set(it.uid, tries + 1);
