@@ -13,17 +13,15 @@ export default function Saved() {
 
   return (
     <div className="space-y-3">
-      <div className="border-b-2 border-foreground pb-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">§ 03 — Archive</div>
-        <h1 className="font-display text-4xl mt-1 flex items-end gap-2 leading-none">
-          <Star className="w-6 h-6 text-primary fill-primary mb-1" /> Saved
-          <span className="italic text-primary">({saved.length}).</span>
-        </h1>
+      <div className="border-b border-border pb-3 flex items-center gap-2">
+        <Star className="w-5 h-5 text-primary fill-primary" />
+        <h1 className="text-2xl font-semibold">Saved</h1>
+        <span className="text-sm text-muted-foreground">({saved.length})</span>
       </div>
       {saved.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground brutal">
           <Star className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-mono uppercase tracking-[0.2em] text-xs">— Empty archive —</p>
+          <p className="text-sm">No saved items yet.</p>
         </div>
       ) : (
         <div className="space-y-2">
