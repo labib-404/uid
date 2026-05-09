@@ -31,7 +31,7 @@ const MOBILE_HEADERS: Record<string, string> = {
 async function tryFetch(
   url: string,
   headers: Record<string, string> = FB_HEADERS,
-  attempts = 2,
+  attempts = 4,
 ): Promise<{ html: string | null; rateLimited: boolean }> {
   let rateLimited = false;
   for (let i = 0; i < attempts; i++) {
@@ -39,7 +39,7 @@ async function tryFetch(
       const res = await fetch(url, {
         headers,
         redirect: "follow",
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.status === 429) { rateLimited = true; }
       else if (res.ok) {
@@ -47,7 +47,7 @@ async function tryFetch(
         if (text.length >= 500) return { html: text, rateLimited: false };
       }
     } catch { /* retry */ }
-    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 350 + i * 400));
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 400 * Math.pow(2, i)));
   }
   return { html: null, rateLimited };
 }
@@ -69,7 +69,7 @@ async function fetchFb(uid: string) {
       ];
   let anyRate = false;
   for (const { url, headers } of urls) {
-    const r = await tryFetch(url, headers, 2);
+    const r = await tryFetch(url, headers, 3);
     if (r.html) return r;
     if (r.rateLimited) anyRate = true;
   }
@@ -365,8 +365,8 @@ Deno.serve(async (req) => {
       force?: boolean;
     };
     const { uids, igOnly, igCandidates, force } = body;
-    if (!Array.isArray(uids) || uids.length === 0 || uids.length > 20) {
-      return new Response(JSON.stringify({ error: "Provide 1-20 uids" }), {
+    if (!Array.isArray(uids) || uids.length === 0 || uids.length > 50) {
+      return new Response(JSON.stringify({ error: "Provide 1-50 uids" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
