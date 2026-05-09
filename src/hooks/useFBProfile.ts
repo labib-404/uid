@@ -78,8 +78,12 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
     async (uids: string[]) => {
       const requested = Array.from(new Set(uids.map((u) => u.trim()).filter(Boolean)));
       const skipped = requested.filter((u) => FETCH_LOCKS.has(u));
-      const list = requested.filter((u) => !FETCH_LOCKS.has(u)).slice(0, 50);
+      const lockedComplete = requested.filter((u) => !FETCH_LOCKS.has(u) && COMPLETE_LOCKS.has(u));
+      const list = requested
+        .filter((u) => !FETCH_LOCKS.has(u) && !COMPLETE_LOCKS.has(u))
+        .slice(0, 50);
       if (skipped.length) toast.message(`${skipped.length} already fetching — skipped`);
+      if (lockedComplete.length) toast.message(`${lockedComplete.length} already complete — locked`);
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
@@ -151,6 +155,15 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             };
           })
         );
+        // Persist completion lock for any UID that now has all 4 core fields.
+        for (const p of list) {
+          const r = results[p];
+          if (!r || r.error || !hasUsefulProfileResult(r)) continue;
+          if (r.name && r.username && r.photoUrl && r.followerCount) {
+            COMPLETE_LOCKS.add(p);
+          }
+        }
+        persistCompletes();
         if (okCount) toast.success(`Fetched ${okCount} profile${okCount > 1 ? "s" : ""}`);
         if (failCount) toast.error(`${failCount} not found / rate limited`);
       } catch (e: any) {
