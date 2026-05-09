@@ -63,7 +63,7 @@ export default function Home() {
   const retryTimersRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
-    const MAX = 12;
+    const MAX = 15;
     const isIncomplete = (i: typeof items[number]) =>
       !i.real_name || !i.username || !i.photo_url || !i.follower_count;
     const isComplete = (i: typeof items[number]) =>
@@ -83,8 +83,8 @@ export default function Home() {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
-      // Exponential backoff: 3s, 6s, 12s, 24s … capped at 5min
-      const delay = Math.min(3000 * Math.pow(2, tries), 300_000);
+      // Exponential backoff: 2s, 4s, 8s, 16s … capped at 5min
+      const delay = Math.min(2000 * Math.pow(2, tries), 300_000);
       const timer = window.setTimeout(() => {
         retryTimersRef.current.delete(it.uid);
         retryCountsRef.current.set(it.uid, tries + 1);
