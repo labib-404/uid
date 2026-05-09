@@ -16,6 +16,16 @@ type ProfileResult = {
   error?: string;
 };
 
+type ErrKind = "rate_limited" | "not_found" | "network" | "empty";
+function classifyError(r?: ProfileResult | null): ErrKind | null {
+  if (!r) return "network";
+  if (r.error === "rate_limited") return "rate_limited";
+  if (r.error === "not_found") return "not_found";
+  if (r.error) return "network";
+  if (!hasUsefulProfileResult(r)) return "empty";
+  return null;
+}
+
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 
@@ -114,21 +124,28 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       let failCount = 0;
       try {
         let results = await runOnce(false);
-        // Auto-retry UIDs that failed (including rate-limited) — up to 4 retries with backoff
+        // Smart retry: only re-attempt transient failures (rate-limited / network / empty).
+        // Permanent "not_found" responses are NOT retried in-batch — saves time and avoids hammering FB.
         for (let attempt = 2; attempt <= 5; attempt++) {
-          const failedUids = list.filter((u) => !hasUsefulProfileResult(results[u]));
-          if (!failedUids.length) break;
+          const retryable = list.filter((u) => {
+            const k = classifyError(results[u]);
+            return k === "rate_limited" || k === "network" || k === "empty";
+          });
+          if (!retryable.length) break;
           setItems((prev) =>
             prev.map((p) =>
-              failedUids.includes(p.uid)
+              retryable.includes(p.uid)
                 ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
                 : p
             )
           );
-          await new Promise((r) => setTimeout(r, 1500 * Math.pow(1.8, attempt - 2)));
+          // Longer backoff when rate-limited is in the mix
+          const hasRate = retryable.some((u) => classifyError(results[u]) === "rate_limited");
+          const base = hasRate ? 2500 : 1200;
+          await new Promise((r) => setTimeout(r, base * Math.pow(1.8, attempt - 2)));
           try {
             const retry = await supabase.functions.invoke("fb-profile-lookup", {
-              body: { uids: failedUids, force: true },
+              body: { uids: retryable, force: true },
             });
             if (!retry.error) {
               const retryResults = (retry.data?.results ?? {}) as Record<string, ProfileResult>;
@@ -139,10 +156,24 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         setItems((prev) =>
           prev.map((p) => {
             const r = results[p.uid];
-            if (!r) return listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p;
+            const nowIso = new Date().toISOString();
+            if (!r) {
+              return listSet.has(p.uid)
+                ? { ...p, instagram_checking: false, fetch_status: "failed", fetch_error: "no response", fetch_last_attempt_at: nowIso }
+                : p;
+            }
             if (r.error || !hasUsefulProfileResult(r)) {
               failCount++;
-              return { ...p, instagram_checking: false, fetch_status: r.error === "rate_limited" ? "rate_limited" : "failed" };
+              const kind = classifyError(r);
+              const status: FBId["fetch_status"] =
+                kind === "rate_limited" ? "rate_limited" : kind === "not_found" ? "not_found" : "failed";
+              return {
+                ...p,
+                instagram_checking: false,
+                fetch_status: status,
+                fetch_error: r.error ?? "empty result",
+                fetch_last_attempt_at: nowIso,
+              };
             }
             okCount++;
             return {
@@ -159,6 +190,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               instagram_checking: false,
               profile_fetched_at: new Date().toISOString(),
               fetch_status: "done",
+              fetch_error: null,
+              fetch_last_attempt_at: nowIso,
             };
           })
         );
@@ -171,8 +204,13 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
           }
         }
         persistCompletes();
+        const notFound = list.filter((u) => classifyError(results[u]) === "not_found").length;
+        const rateLim = list.filter((u) => classifyError(results[u]) === "rate_limited").length;
+        const otherFail = failCount - notFound - rateLim;
         if (okCount) toast.success(`Fetched ${okCount} profile${okCount > 1 ? "s" : ""}`);
-        if (failCount) toast.error(`${failCount} not found / rate limited`);
+        if (rateLim) toast.warning(`${rateLim} rate-limited — will retry later`);
+        if (notFound) toast.message(`${notFound} not found (skipping retries)`);
+        if (otherFail > 0) toast.error(`${otherFail} failed`);
       } catch (e: any) {
         toast.error(e?.message ?? "Fetch failed");
         setItems((prev) =>
