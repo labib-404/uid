@@ -114,20 +114,16 @@
     border: 1px solid hsl(var(--foreground) / 0.08);
   }
   .brutal {
-    border: 1px solid hsl(var(--foreground) / 0.08);
+    border: 1.5px solid hsl(var(--foreground));
     box-shadow: var(--shadow-card);
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: hsl(var(--card));
     border-radius: var(--radius);
   }
   .brutal-lg {
-    border: 1px solid hsl(var(--foreground) / 0.1);
+    border: 2px solid hsl(var(--foreground));
     box-shadow: var(--shadow-brutal);
-    background: hsl(var(--card) / 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: calc(var(--radius) + 0.25rem);
+    background: hsl(var(--card));
+    border-radius: var(--radius);
   }
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-card { box-shadow: var(--shadow-card); }
