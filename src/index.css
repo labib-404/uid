@@ -58,6 +58,75 @@
     --sidebar-ring: 14 70% 48%;
   }
 
+  .theme-midnight {
+    --background: 240 30% 5%;
+    --foreground: 220 30% 96%;
+    --card: 240 28% 8%;
+    --card-foreground: 220 30% 96%;
+    --popover: 240 28% 8%;
+    --popover-foreground: 220 30% 96%;
+    --primary: 160 90% 55%;
+    --primary-foreground: 240 30% 5%;
+    --secondary: 240 25% 14%;
+    --secondary-foreground: 220 30% 96%;
+    --muted: 240 20% 14%;
+    --muted-foreground: 230 15% 65%;
+    --accent: 270 90% 70%;
+    --accent-foreground: 240 30% 5%;
+    --destructive: 350 90% 60%;
+    --destructive-foreground: 240 30% 5%;
+    --border: 240 25% 18%;
+    --input: 240 25% 16%;
+    --ring: 160 90% 55%;
+    --shadow-card: 0 8px 30px hsl(240 60% 2% / 0.5);
+    --shadow-brutal: 0 20px 60px -10px hsl(270 90% 50% / 0.35);
+  }
+  .theme-noir {
+    --background: 0 0% 7%;
+    --foreground: 42 60% 88%;
+    --card: 0 0% 10%;
+    --card-foreground: 42 60% 88%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 42 60% 88%;
+    --primary: 42 75% 55%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 42 60% 88%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 42 15% 60%;
+    --accent: 42 75% 55%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 42 60% 88%;
+    --border: 42 20% 22%;
+    --input: 42 20% 22%;
+    --ring: 42 75% 55%;
+    --shadow-card: 3px 3px 0 0 hsl(42 75% 55%);
+    --shadow-brutal: 6px 6px 0 0 hsl(42 75% 55%);
+  }
+  .theme-ocean {
+    --background: 205 60% 96%;
+    --foreground: 210 50% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 50% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 50% 12%;
+    --primary: 200 85% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 205 40% 90%;
+    --secondary-foreground: 210 50% 12%;
+    --muted: 205 40% 90%;
+    --muted-foreground: 210 20% 38%;
+    --accent: 178 60% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 205 30% 80%;
+    --input: 205 30% 80%;
+    --ring: 200 85% 38%;
+    --shadow-card: 3px 3px 0 0 hsl(210 50% 12%);
+    --shadow-brutal: 6px 6px 0 0 hsl(210 50% 12%);
+  }
   .light {
     --background: 0 0% 100%;
     --foreground: 240 10% 4%;
