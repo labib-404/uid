@@ -1,7 +1,8 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Home, Upload, Star, Settings, LayoutGrid, Rows, Palette } from "lucide-react";
-import { useSettings, DESIGN_THEMES } from "@/hooks/useSettings";
+import { useSettings, DESIGN_THEMES, DesignTheme } from "@/hooks/useSettings";
+import { useEffect, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,27 @@ export default function AppLayout() {
   const { fontSize, designTheme, setDesignTheme, viewMode, setViewMode } = useSettings();
   const navigate = useNavigate();
   const fontClass = fontSize === "sm" ? "text-sm" : fontSize === "lg" ? "text-lg" : "text-base";
+  const [previewTheme, setPreviewTheme] = useState<DesignTheme | null>(null);
+  const previewRef = useRef<DesignTheme | null>(null);
+
+  // Apply temporary preview theme on hover; revert on leave/select.
+  useEffect(() => {
+    const root = document.documentElement;
+    const all = [
+      "theme-paper","theme-midnight","theme-noir","theme-ocean",
+      "theme-vapor","theme-forest","theme-sunset","theme-mono",
+    ];
+    if (previewTheme) {
+      all.forEach((c) => root.classList.remove(c));
+      if (previewTheme !== "paper") root.classList.add(`theme-${previewTheme}`);
+      previewRef.current = previewTheme;
+    } else if (previewRef.current) {
+      // Revert to actual selected theme
+      all.forEach((c) => root.classList.remove(c));
+      if (designTheme !== "paper") root.classList.add(`theme-${designTheme}`);
+      previewRef.current = null;
+    }
+  }, [previewTheme, designTheme]);
 
   const tickerItems = [
     "OPERATOR OS · v5", "VOL. 05 · 2026", "PERSONAL ARCHIVE",
@@ -53,18 +75,28 @@ export default function AppLayout() {
                   <Palette className="w-3 h-3 opacity-70" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent
+                align="end"
+                className="w-48"
+                onMouseLeave={() => setPreviewTheme(null)}
+                onCloseAutoFocus={() => setPreviewTheme(null)}
+              >
                 <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider">Design mode</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {DESIGN_THEMES.map((t) => (
                   <DropdownMenuItem
                     key={t.id}
-                    onClick={() => setDesignTheme(t.id)}
+                    onClick={() => { setPreviewTheme(null); setDesignTheme(t.id); }}
+                    onMouseEnter={() => setPreviewTheme(t.id)}
+                    onFocus={() => setPreviewTheme(t.id)}
                     className={`flex items-center gap-2 ${designTheme === t.id ? "bg-accent/20 font-semibold" : ""}`}
                   >
                     <span className="w-3.5 h-3.5 rounded-full border border-foreground/30 shrink-0" style={{ background: t.swatch }} />
                     <span>{t.label}</span>
                     {designTheme === t.id && <span className="ml-auto text-[10px] font-mono">●</span>}
+                    {previewTheme === t.id && designTheme !== t.id && (
+                      <span className="ml-auto text-[9px] font-mono opacity-70">PREVIEW</span>
+                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
