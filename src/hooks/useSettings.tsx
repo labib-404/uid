@@ -77,12 +77,14 @@ type Settings = {
   theme: Theme;
   designTheme: DesignTheme;
   swipeDelete: boolean;
+  autoRetry: boolean;
   palette: Palette;
   setFontSize: (s: FontSize) => void;
   setViewMode: (v: ViewMode) => void;
   setTheme: (t: Theme) => void;
   setDesignTheme: (d: DesignTheme) => void;
   setSwipeDelete: (b: boolean) => void;
+  setAutoRetry: (b: boolean) => void;
   setPalette: (p: Palette) => void;
   resetPalette: () => void;
 };
@@ -104,6 +106,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
   const [swipeDelete, setSwipeDelete] = useState<boolean>(
     () => localStorage.getItem("swipeDelete") !== "false"
+  );
+  const [autoRetry, setAutoRetry] = useState<boolean>(
+    () => localStorage.getItem("autoRetry") !== "false"
   );
   const [palette, setPalette] = useState<Palette>(() => {
     try {
@@ -134,13 +139,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (designTheme !== "paper") root.classList.add(`theme-${designTheme}`);
   }, [designTheme]);
   useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
+  useEffect(() => localStorage.setItem("autoRetry", String(autoRetry)), [autoRetry]);
   useEffect(() => {
     localStorage.setItem("palette", JSON.stringify(palette));
     applyPalette(palette);
   }, [palette]);
 
   return (
-    <Ctx.Provider value={{ fontSize, viewMode, theme, designTheme, swipeDelete, palette, setFontSize, setViewMode, setTheme, setDesignTheme, setSwipeDelete, setPalette, resetPalette: () => setPalette(DEFAULT_PALETTE) }}>
+    <Ctx.Provider value={{ fontSize, viewMode, theme, designTheme, swipeDelete, autoRetry, palette, setFontSize, setViewMode, setTheme, setDesignTheme, setSwipeDelete, setAutoRetry, setPalette, resetPalette: () => setPalette(DEFAULT_PALETTE) }}>
       {children}
     </Ctx.Provider>
   );

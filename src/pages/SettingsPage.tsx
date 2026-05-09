@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
-  const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme, swipeDelete, setSwipeDelete, palette, setPalette, resetPalette } = useSettings();
+  const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme, swipeDelete, setSwipeDelete, autoRetry, setAutoRetry, palette, setPalette, resetPalette } = useSettings();
   const { items, setItems } = useFBIds();
 
   const presets = [
@@ -192,6 +192,20 @@ export default function SettingsPage() {
         </div>
         <p className="text-xs text-muted-foreground">
           {swipeDelete ? "Swipe an item left to delete it." : "A delete button will appear on each item instead."}
+        </p>
+      </div>
+
+      <div className="brutal p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="autoretry-toggle" className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-primary" /> Auto-retry failed fetches
+          </Label>
+          <Switch id="autoretry-toggle" checked={autoRetry} onCheckedChange={setAutoRetry} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {autoRetry
+            ? "Failed and rate-limited UIDs are re-fetched automatically with exponential backoff (up to 8 attempts)."
+            : "You'll need to refresh failed UIDs manually."}
         </p>
       </div>
 
