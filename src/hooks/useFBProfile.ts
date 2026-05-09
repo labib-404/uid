@@ -19,6 +19,23 @@ type ProfileResult = {
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 
+// Per-UID completion lock — once a profile has all core fields, skip re-fetch.
+// Persisted across the session in localStorage so it survives reloads.
+const COMPLETE_KEY = "fb_complete_uids_v1";
+const COMPLETE_LOCKS: Set<string> = (() => {
+  try {
+    const raw = localStorage.getItem(COMPLETE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch { return new Set(); }
+})();
+function persistCompletes() {
+  try { localStorage.setItem(COMPLETE_KEY, JSON.stringify([...COMPLETE_LOCKS])); } catch {}
+}
+export function unlockUid(uid: string) {
+  COMPLETE_LOCKS.delete(uid);
+  persistCompletes();
+}
+
 function hasUsefulProfileResult(result?: ProfileResult | null) {
   if (!result || result.error) return false;
   return Boolean(
