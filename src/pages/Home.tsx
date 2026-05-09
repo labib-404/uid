@@ -54,9 +54,13 @@ export default function Home() {
     if (!autoRetry) return;
     const MAX = 12;
     const isIncomplete = (i: typeof items[number]) =>
-      !i.real_name && !i.username && !i.photo_url;
+      !i.real_name || !i.username || !i.photo_url || !i.follower_count;
+    const isComplete = (i: typeof items[number]) =>
+      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
     const candidates = items.filter((i) => {
       if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") return false;
+      // LOCK: once a UID has full data (name + username + photo + followers), never re-fetch.
+      if (isComplete(i)) return false;
       if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") return true;
       // Never fetched or fetched but missing core fields → re-queue
       if (!i.fetch_status && isIncomplete(i)) return true;
