@@ -260,28 +260,28 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
                 </span>
               )}
               {item.fetch_status === "pending" && (
-                <span title="Fetching…" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-400 border-blue-500/30">
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" /> Fetching
+                <span title={`Fetching profile (attempt ${item.fetch_attempts ?? 1})`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-400 border-blue-500/30">
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" /> Fetching · #{item.fetch_attempts ?? 1}
                 </span>
               )}
               {item.fetch_status === "retrying" && (
-                <span title={`Retrying (attempt ${item.fetch_attempts ?? 2})`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
-                  <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Retry
+                <span title={`Retrying — attempt ${item.fetch_attempts ?? 2} of 4`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Retry · {item.fetch_attempts ?? 2}/4
                 </span>
               )}
               {item.fetch_status === "rate_limited" && (
-                <span title="Rate limited by Facebook" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-orange-500/10 text-orange-400 border-orange-500/30">
-                  <Clock className="w-2.5 h-2.5" /> Limited
+                <span title={`Rate limited by Facebook after ${item.fetch_attempts ?? 1} attempt(s) — tap refresh to retry`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-orange-500/10 text-orange-400 border-orange-500/30">
+                  <Clock className="w-2.5 h-2.5" /> Limited · {item.fetch_attempts ?? 1}×
                 </span>
               )}
               {item.fetch_status === "failed" && (
-                <span title="Fetch failed — tap refresh to retry" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-rose-500/10 text-rose-400 border-rose-500/30">
-                  <AlertTriangle className="w-2.5 h-2.5" /> Failed
+                <span title={`Failed after ${item.fetch_attempts ?? 1} attempt(s) — tap refresh to retry`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  <AlertTriangle className="w-2.5 h-2.5" /> Failed · {item.fetch_attempts ?? 1}×
                 </span>
               )}
               {item.fetch_status === "done" && (
-                <span title="Fetched successfully" className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                  <Check className="w-2.5 h-2.5" /> Done
+                <span title={`Fetched successfully${(item.fetch_attempts ?? 1) > 1 ? ` after ${item.fetch_attempts} attempts` : ""}${item.profile_fetched_at ? ` · ${new Date(item.profile_fetched_at).toLocaleString()}` : ""}`} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                  <Check className="w-2.5 h-2.5" /> Done{(item.fetch_attempts ?? 1) > 1 ? ` · ${item.fetch_attempts}×` : ""}
                 </span>
               )}
             </div>
