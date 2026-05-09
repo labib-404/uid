@@ -82,6 +82,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         if (error) throw error;
         return (data?.results ?? {}) as Record<string, ProfileResult>;
       };
+      let okCount = 0;
+      let failCount = 0;
       try {
         let results = await runOnce(false);
         // Auto-retry UIDs that failed (including rate-limited) — up to 3 retries with backoff
@@ -106,8 +108,6 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             }
           } catch { /* keep retrying */ }
         }
-        let okCount = 0;
-        let failCount = 0;
         setItems((prev) =>
           prev.map((p) => {
             const r = results[p.uid];
