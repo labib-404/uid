@@ -140,7 +140,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
       {swipeDelete && (
         <motion.div
           style={{ opacity: bgOpacity }}
-          className="absolute inset-0 bg-destructive border-[1.5px] border-foreground flex items-center justify-end pr-6 pointer-events-none"
+          className="absolute inset-0 bg-destructive rounded-md flex items-center justify-end pr-6 pointer-events-none"
         >
           <motion.div style={{ scale: iconScale }}>
             <Trash2 className="text-destructive-foreground w-5 h-5" />
@@ -159,7 +159,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
               onDragEnd,
             }
           : {})}
-        className={`relative bg-card border-[1.5px] border-foreground shadow-card transition-all duration-200 hover:-translate-y-px hover:translate-x-px ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} ${compact ? "p-2.5" : "p-3.5"}`}
+        className={`relative bg-card border border-border rounded-md shadow-card transition-colors hover:bg-secondary/30 ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} ${compact ? "p-2.5" : "p-3.5"}`}
       >
         <div className="flex items-start gap-3">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-2" />
