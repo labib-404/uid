@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Upload, Star, Settings } from "lucide-react";
-import { useSettings } from "@/hooks/useSettings";
+import { Home, Upload, Star, Settings, LayoutGrid, Rows } from "lucide-react";
+import { useSettings, DESIGN_THEMES } from "@/hooks/useSettings";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home },
@@ -11,7 +11,7 @@ const tabs = [
 ];
 
 export default function AppLayout() {
-  const { fontSize } = useSettings();
+  const { fontSize, designTheme, setDesignTheme, viewMode, setViewMode } = useSettings();
   const navigate = useNavigate();
   const fontClass = fontSize === "sm" ? "text-sm" : fontSize === "lg" ? "text-lg" : "text-base";
 
@@ -30,9 +30,25 @@ export default function AppLayout() {
             <span className="font-display text-[28px] leading-none">FB UID</span>
             <span className="font-display italic text-[28px] leading-none text-primary">Pro.</span>
           </button>
-          <div className="flex items-center gap-2 pb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-blink" />
-            <span className="text-[10px] uppercase tracking-[0.25em] font-mono">Personal · No.04</span>
+          <div className="flex items-center gap-1.5 pb-1">
+            {DESIGN_THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setDesignTheme(t.id)}
+                title={t.label}
+                aria-label={`${t.label} theme`}
+                className={`w-4 h-4 rounded-full border transition-all ${designTheme === t.id ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110" : "border-foreground/40 hover:scale-110"}`}
+                style={{ background: t.swatch }}
+              />
+            ))}
+            <button
+              onClick={() => setViewMode(viewMode === "compact" ? "full" : "compact")}
+              title={`Switch to ${viewMode === "compact" ? "full" : "compact"} view`}
+              aria-label="Toggle view mode"
+              className="ml-1 p-1 border border-foreground/40 rounded hover:bg-foreground hover:text-background transition-colors"
+            >
+              {viewMode === "compact" ? <LayoutGrid className="w-3 h-3" /> : <Rows className="w-3 h-3" />}
+            </button>
           </div>
         </div>
         <div className="border-t border-foreground/80 bg-foreground text-background overflow-hidden marquee-mask">
