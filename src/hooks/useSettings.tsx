@@ -3,73 +3,16 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 type FontSize = "sm" | "md" | "lg";
 type ViewMode = "full" | "compact";
 type Theme = "dark" | "light";
-export type DesignTheme =
-  | "paper"
-  | "midnight"
-  | "noir"
-  | "ocean"
-  | "vapor"
-  | "forest"
-  | "sunset"
-  | "mono";
 
+// Kept for backward compat — only one normal theme now.
+export type DesignTheme = "default";
 export const DESIGN_THEMES: { id: DesignTheme; label: string; swatch: string }[] = [
-  { id: "paper",    label: "Paper",    swatch: "#c4654a" },
-  { id: "midnight", label: "Midnight", swatch: "#2BE5A8" },
-  { id: "noir",     label: "Noir",     swatch: "#d4a838" },
-  { id: "ocean",    label: "Ocean",    swatch: "#1e88c4" },
-  { id: "vapor",    label: "Vapor",    swatch: "#c084fc" },
-  { id: "forest",   label: "Forest",   swatch: "#84cc16" },
-  { id: "sunset",   label: "Sunset",   swatch: "#f97316" },
-  { id: "mono",     label: "Mono",     swatch: "#171717" },
+  { id: "default", label: "Default", swatch: "#3b82f6" },
 ];
 
-export type Palette = {
-  primary: string;   // hex
-  accent: string;    // hex
-  background: string;// hex
-};
-
-export const DEFAULT_PALETTE: Palette = {
-  primary: "#2BE5A8",
-  accent: "#B98BFF",
-  background: "#0B0B14",
-};
-
-function hexToHsl(hex: string): string {
-  const m = hex.replace("#", "");
-  const r = parseInt(m.substring(0, 2), 16) / 255;
-  const g = parseInt(m.substring(2, 4), 16) / 255;
-  const b = parseInt(m.substring(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0; const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
-
-export function applyPalette(p: Palette) {
-  const root = document.documentElement;
-  const bg = hexToHsl(p.background);
-  const pr = hexToHsl(p.primary);
-  const ac = hexToHsl(p.accent);
-  // Derive foreground (light if bg dark)
-  const lightness = parseInt(bg.split(" ")[2]);
-  const fg = lightness < 50 ? "220 30% 96%" : "240 10% 4%";
-  root.style.setProperty("--background", bg);
-  root.style.setProperty("--foreground", fg);
-  root.style.setProperty("--primary", pr);
-  root.style.setProperty("--ring", pr);
-  root.style.setProperty("--accent", ac);
-}
+export type Palette = { primary: string; accent: string; background: string };
+export const DEFAULT_PALETTE: Palette = { primary: "#3b82f6", accent: "#22c55e", background: "#0f0f0f" };
+export function applyPalette(_p: Palette) { /* no-op in normal mode */ }
 
 type Settings = {
   fontSize: FontSize;
@@ -101,21 +44,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem("theme") as Theme) || "dark"
   );
-  const [designTheme, setDesignTheme] = useState<DesignTheme>(
-    () => (localStorage.getItem("designTheme") as DesignTheme) || "paper"
-  );
   const [swipeDelete, setSwipeDelete] = useState<boolean>(
     () => localStorage.getItem("swipeDelete") !== "false"
   );
   const [autoRetry, setAutoRetry] = useState<boolean>(
     () => localStorage.getItem("autoRetry") !== "false"
   );
-  const [palette, setPalette] = useState<Palette>(() => {
-    try {
-      const raw = localStorage.getItem("palette");
-      return raw ? { ...DEFAULT_PALETTE, ...JSON.parse(raw) } : DEFAULT_PALETTE;
-    } catch { return DEFAULT_PALETTE; }
-  });
 
   useEffect(() => localStorage.setItem("fontSize", fontSize), [fontSize]);
   useEffect(() => localStorage.setItem("viewMode", viewMode), [viewMode]);
@@ -124,32 +58,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("light", theme === "light");
   }, [theme]);
   useEffect(() => {
-    localStorage.setItem("designTheme", designTheme);
+    // Strip any legacy theme classes.
     const root = document.documentElement;
-    [
-      "theme-paper",
-      "theme-midnight",
-      "theme-noir",
-      "theme-ocean",
-      "theme-vapor",
-      "theme-forest",
-      "theme-sunset",
-      "theme-mono",
-    ].forEach((c) => root.classList.remove(c));
-    if (designTheme !== "paper") root.classList.add(`theme-${designTheme}`);
-  }, [designTheme]);
+    ["theme-paper","theme-midnight","theme-noir","theme-ocean","theme-vapor","theme-forest","theme-sunset","theme-mono"]
+      .forEach((c) => root.classList.remove(c));
+  }, []);
   useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
   useEffect(() => localStorage.setItem("autoRetry", String(autoRetry)), [autoRetry]);
-  useEffect(() => {
-    localStorage.setItem("palette", JSON.stringify(palette));
-    applyPalette(palette);
-  }, [palette]);
 
   return (
-    <Ctx.Provider value={{ fontSize, viewMode, theme, designTheme, swipeDelete, autoRetry, palette, setFontSize, setViewMode, setTheme, setDesignTheme, setSwipeDelete, setAutoRetry, setPalette, resetPalette: () => setPalette(DEFAULT_PALETTE) }}>
+    <Ctx.Provider value={{
+      fontSize, viewMode, theme, designTheme: "default", swipeDelete, autoRetry, palette: DEFAULT_PALETTE,
+      setFontSize, setViewMode, setTheme,
+      setDesignTheme: () => {},
+      setSwipeDelete, setAutoRetry,
+      setPalette: () => {}, resetPalette: () => {},
+    }}>
       {children}
     </Ctx.Provider>
   );
 }
 
-export const useSettings = () => useContext(Ctx);
+export function useSettings() { return useContext(Ctx); }
