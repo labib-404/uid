@@ -63,8 +63,8 @@ export default function Import() {
     // Auto-fetch profiles in background, in chunks of 20
     (async () => {
       const uids = newItems.map((i) => i.uid);
-      for (let i = 0; i < uids.length; i += 20) {
-        await fetchProfiles(uids.slice(i, i + 20));
+      for (let i = 0; i < uids.length; i += 50) {
+        await fetchProfiles(uids.slice(i, i + 50));
       }
     })();
   };
