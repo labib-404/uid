@@ -61,6 +61,9 @@ export default function Home() {
   // Per-UID cap at 12 retries with exponential backoff.
   const retryCountsRef = useRef<Map<string, number>>(new Map());
   const retryTimersRef = useRef<Map<string, number>>(new Map());
+  // Tracks the wall-clock time each scheduled retry will fire, used to
+  // surface a "next retry in Xs" countdown on the import progress bar.
+  const retryEtaRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
     const MAX = 15;
@@ -106,10 +109,12 @@ export default function Home() {
       else delay = Math.min(2000 * Math.pow(2, tries), 300_000);
       const timer = window.setTimeout(() => {
         retryTimersRef.current.delete(it.uid);
+        retryEtaRef.current.delete(it.uid);
         retryCountsRef.current.set(it.uid, tries + 1);
         fetchProfiles([it.uid]);
       }, delay);
       retryTimersRef.current.set(it.uid, timer);
+      retryEtaRef.current.set(it.uid, Date.now() + delay);
     }
     // Clear retry counter for UIDs that have succeeded with usable data
     for (const it of items) {
@@ -370,6 +375,26 @@ export default function Home() {
   }, [items]);
   const showImportBar = importProgress.retrying > 0 || igProgress.total > 0;
 
+  // 1Hz tick that drives the next-retry countdown while the bar is visible.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showImportBar) return;
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [showImportBar]);
+  const nextRetryInfo = useMemo(() => {
+    let soonest = Infinity;
+    let queued = 0;
+    for (const eta of retryEtaRef.current.values()) {
+      queued++;
+      if (eta < soonest) soonest = eta;
+    }
+    if (!queued || !isFinite(soonest)) return { queued: 0, secs: 0 };
+    return { queued, secs: Math.max(0, Math.ceil((soonest - nowTick) / 1000)) };
+  }, [nowTick, importProgress.retrying]);
+  const fmtSecs = (s: number) =>
+    s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+
   return (
     <div className="space-y-3">
       <div className="border-b border-border pb-3">
@@ -392,6 +417,13 @@ export default function Home() {
                 <span className="text-destructive">{importProgress.failed} failed</span>
               </div>
             </div>
+            {nextRetryInfo.queued > 0 && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(nextRetryInfo.secs)}</span></span>
+                <span className="opacity-60">·</span>
+                <span>{nextRetryInfo.queued} queued</span>
+              </div>
+            )}
             <div className="w-full h-1.5 bg-muted rounded overflow-hidden">
               <div
                 className="h-full bg-primary transition-all"
