@@ -4,17 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Sun, Moon, Hand, Trash2, Database, RotateCcw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { fontSize, setFontSize, viewMode, setViewMode, theme, setTheme, swipeDelete, setSwipeDelete, autoRetry, setAutoRetry } = useSettings();
   const { items, setItems } = useFBIds();
 
   const clearAll = () => {
-    if (!items.length) return toast.info("Nothing to clear");
+    if (!items.length) return;
     if (!confirm(`Delete all ${items.length} items? This cannot be undone.`)) return;
     setItems([]);
-    toast.success("All data cleared");
   };
 
   return (

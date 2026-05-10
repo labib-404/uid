@@ -22,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FBId } from "@/types/fbid";
-import { toast } from "sonner";
 
 type Filter = "all" | "checked" | "unchecked" | "saved" | "noted" | "tagged";
 type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
@@ -195,16 +194,11 @@ export default function Home() {
 
   const deleteOne = useCallback((item: FBId) => {
     setItems((prev) => prev.filter((p) => p.id !== item.id));
-    toast("Deleted", {
-      action: { label: "Undo", onClick: () => setItems((prev) => [item, ...prev]) },
-      duration: 5000,
-    });
   }, [setItems]);
 
   const bulkUpdate = (patch: Partial<FBId>) => {
     if (!selected.size) return;
     setItems((prev) => prev.map((p) => (selected.has(p.id) ? { ...p, ...patch } : p)));
-    toast.success(`Updated ${selected.size} item(s)`);
     clearSel();
   };
 
@@ -213,10 +207,6 @@ export default function Home() {
     const removed = items.filter((p) => selected.has(p.id));
     setItems((prev) => prev.filter((p) => !selected.has(p.id)));
     clearSel();
-    toast(`Deleted ${removed.length}`, {
-      duration: 5000,
-      action: { label: "Undo", onClick: () => setItems((prev) => [...removed, ...prev]) },
-    });
   };
 
   const bulkCopy = (fmt: "uidpass" | "uid" | "pass") => {
@@ -225,7 +215,6 @@ export default function Home() {
       fmt === "uid" ? i.uid : fmt === "pass" ? i.password ?? "" : `${i.uid}${i.password ? "|" + i.password : ""}`
     ).join("\n");
     navigator.clipboard.writeText(text);
-    toast.success(`Copied ${sel.length}`);
   };
 
   const bulkFetch = () => {
@@ -238,7 +227,7 @@ export default function Home() {
     const missing = items
       .filter((i) => !i.real_name && !i.username && !i.photo_url && i.fetch_status !== "done")
       .map((i) => i.uid);
-    if (!missing.length) { toast("All profiles already fetched"); return; }
+    if (!missing.length) return;
     fetchProfiles(missing);
   };
 
@@ -251,7 +240,7 @@ export default function Home() {
         i.fetch_status === "rate_limited" ||
         i.fetch_status === "not_found"
     );
-    if (!failed.length) { toast("No failed items to retry"); return; }
+    if (!failed.length) return;
     const uids = failed.map((i) => i.uid);
     // Reset per-UID retry counters so the auto-retry loop will pick up
     // anything beyond the first batch slice.
@@ -270,12 +259,11 @@ export default function Home() {
     // Kick the first slice now; the auto-retry loop drains the rest under
     // the global concurrency gate.
     fetchProfiles(uids.slice(0, 50));
-    toast.message(`Retrying ${uids.length} failed item${uids.length === 1 ? "" : "s"}`);
   };
 
   const recheckAllInstagram = () => {
     const candidates = items.filter((i) => i.username || i.instagram_username);
-    if (!candidates.length) { toast("No usernames to verify"); return; }
+    if (!candidates.length) return;
     recheckInstagram(
       candidates.map((i) => ({
         uid: i.uid,
@@ -290,7 +278,7 @@ export default function Home() {
     const failed = items.filter(
       (i) => i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited"
     );
-    if (!failed.length) { toast("No failed IG items to retry"); return; }
+    if (!failed.length) return;
     recheckInstagram(
       failed.map((i) => ({
         uid: i.uid,

@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FBId } from "@/types/fbid";
-import { toast } from "sonner";
 
 type ProfileResult = {
   name?: string | null;
@@ -115,8 +114,6 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       const list = requested
         .filter((u) => !FETCH_LOCKS.has(u) && !COMPLETE_LOCKS.has(u))
         .slice(0, 50);
-      if (skipped.length) toast.message(`${skipped.length} already fetching — skipped`);
-      if (lockedComplete.length) toast.message(`${lockedComplete.length} already complete — locked`);
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
@@ -224,12 +221,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         const notFound = list.filter((u) => classifyError(results[u]) === "not_found").length;
         const rateLim = list.filter((u) => classifyError(results[u]) === "rate_limited").length;
         const otherFail = failCount - notFound - rateLim;
-        if (okCount) toast.success(`Fetched ${okCount} profile${okCount > 1 ? "s" : ""}`);
-        if (rateLim) toast.warning(`${rateLim} rate-limited — will retry later`);
-        if (notFound) toast.message(`${notFound} not found (skipping retries)`);
-        if (otherFail > 0) toast.error(`${otherFail} failed`);
       } catch (e: any) {
-        toast.error(e?.message ?? "Fetch failed");
         setItems((prev) =>
           prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p))
         );
@@ -302,13 +294,9 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             };
           })
         );
-        if (okCount) toast.success(`IG verified: ${okCount}`);
-        if (rateCount) toast.error(`Instagram rate-limited on ${rateCount}`);
-        else if (failCount) toast.error(`IG failed: ${failCount}`);
         bumpEnd(list.length, okCount, failCount);
         return;
       } catch (e: any) {
-        toast.error(e?.message ?? "Re-check failed");
         setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
         bumpEnd(list.length, 0, list.length);
         return;
