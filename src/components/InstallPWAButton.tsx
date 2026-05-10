@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>;
@@ -42,16 +41,9 @@ export default function InstallPWAButton() {
   const handleClick = async () => {
     if (deferred) {
       await deferred.prompt();
-      const { outcome } = await deferred.userChoice;
-      if (outcome === "accepted") toast.success("App installed");
       setDeferred(null);
       return;
     }
-    if (iosHint) {
-      toast.message("Tap Share → Add to Home Screen", { duration: 4000 });
-      return;
-    }
-    toast.message("Open browser menu → Install app", { duration: 4000 });
   };
 
   return (

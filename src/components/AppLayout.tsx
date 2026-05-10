@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Upload, Star, Settings, LayoutGrid, Rows } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
@@ -27,7 +26,6 @@ export default function AppLayout() {
         e.preventDefault();
         const next = viewMode === "compact" ? "full" : "compact";
         setViewMode(next);
-        toast.success(`View: ${next}`, { duration: 1200 });
       }
     };
     window.addEventListener("keydown", handler);
