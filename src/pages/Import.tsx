@@ -60,13 +60,17 @@ export default function Import() {
     setText("");
     nav("/");
 
-    // Auto-fetch profiles in background — 2 concurrent batches of 50.
+    // Auto-fetch profiles in background. Only kick off the first slice here;
+    // the Home auto-retry loop + global concurrency gate will gradually pick up
+    // the rest. This prevents pasting 2-3k UIDs from saturating the network.
     (async () => {
       const uids = newItems.map((i) => i.uid);
       const BATCH = 50;
       const PARALLEL = 2;
+      const PRIME = Math.min(uids.length, BATCH * PARALLEL * 2); // first ~200
+      const primeUids = uids.slice(0, PRIME);
       const batches: string[][] = [];
-      for (let i = 0; i < uids.length; i += BATCH) batches.push(uids.slice(i, i + BATCH));
+      for (let i = 0; i < primeUids.length; i += BATCH) batches.push(primeUids.slice(i, i + BATCH));
       let cursor = 0;
       const worker = async () => {
         while (cursor < batches.length) {
