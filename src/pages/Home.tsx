@@ -317,6 +317,28 @@ export default function Home() {
     { label: "Saved",   val: items.filter((i) => i.pinned).length,      color: "text-foreground italic" },
   ], [items]);
 
+  // Import / fetch progress derived from item state — reflects the true
+  // pipeline (done / retrying / failed) across all imported UIDs.
+  const importProgress = useMemo(() => {
+    const isComplete = (i: FBId) =>
+      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
+    let done = 0, retrying = 0, failed = 0, tracked = 0;
+    for (const i of items) {
+      const hasState = !!i.fetch_status || isComplete(i);
+      if (!hasState) continue;
+      tracked++;
+      if (isComplete(i) || i.fetch_status === "done") done++;
+      else if (i.fetch_status === "pending" || i.fetch_status === "retrying") retrying++;
+      else if (
+        i.fetch_status === "failed" ||
+        i.fetch_status === "rate_limited" ||
+        i.fetch_status === "not_found"
+      ) failed++;
+    }
+    return { tracked, done, retrying, failed };
+  }, [items]);
+  const showImportBar = importProgress.retrying > 0 || igProgress.total > 0;
+
   return (
     <div className="space-y-3">
       <div className="border-b border-border pb-3">
@@ -325,24 +347,30 @@ export default function Home() {
           {items.length} item{items.length === 1 ? "" : "s"} · track, tag and verify accounts
         </p>
       </div>
-      {igProgress.total > 0 && (
+      {showImportBar && (
         <div className="sticky top-0 z-30 -mx-1">
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
               <RefreshCw className="w-3 h-3 animate-spin text-primary" />
               <span className="text-[11px] text-muted-foreground">
-                Sync · {igProgress.done}/{igProgress.total} · {igProgress.total - igProgress.done} left
+                Import · {importProgress.done}/{importProgress.tracked}
               </span>
               <div className="ml-auto flex items-center gap-2 text-[11px]">
-                <span className="text-muted-foreground">{igProgress.processing} pending</span>
-                <span className="text-accent">{igProgress.success} ok</span>
-                <span className="text-destructive">{igProgress.failed} fail</span>
+                <span className="text-primary">{importProgress.done} done</span>
+                <span className="text-amber-400">{importProgress.retrying} retrying</span>
+                <span className="text-destructive">{importProgress.failed} failed</span>
               </div>
             </div>
             <div className="w-full h-1.5 bg-muted rounded overflow-hidden">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(100, (igProgress.done / igProgress.total) * 100)}%` }}
+                style={{
+                  width: `${
+                    importProgress.tracked
+                      ? Math.min(100, (importProgress.done / importProgress.tracked) * 100)
+                      : 0
+                  }%`,
+                }}
               />
             </div>
           </div>
