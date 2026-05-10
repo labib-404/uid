@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Upload, Star, Settings, LayoutGrid, Rows } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import { useEffect } from "react";
+import InstallPWAButton from "@/components/InstallPWAButton";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home },
@@ -41,14 +42,17 @@ export default function AppLayout() {
             <span className="text-lg font-semibold">UID</span>
             <span className="text-lg font-semibold text-primary">Operator</span>
           </button>
-          <button
+          <div className="flex items-center gap-2">
+            <InstallPWAButton />
+            <button
             onClick={() => setViewMode(viewMode === "compact" ? "full" : "compact")}
             title={`Switch to ${viewMode === "compact" ? "full" : "compact"} view`}
             aria-label="Toggle view mode"
             className="p-2 border border-border rounded-md hover:bg-secondary transition-colors"
           >
             {viewMode === "compact" ? <LayoutGrid className="w-4 h-4" /> : <Rows className="w-4 h-4" />}
-          </button>
+            </button>
+          </div>
         </div>
       </header>
 
