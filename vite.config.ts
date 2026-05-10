@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => ({
         name: "FB UID Manager Pro",
         short_name: "UID Manager",
         description: "Bulk import, track, tag, and export Facebook UIDs.",
+        id: "/",
         start_url: "/",
         scope: "/",
         display: "standalone",
@@ -31,8 +32,10 @@ export default defineConfig(({ mode }) => ({
         background_color: "#0b0f1a",
         theme_color: "#0b0f1a",
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
