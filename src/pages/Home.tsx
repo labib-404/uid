@@ -237,6 +237,37 @@ export default function Home() {
     fetchProfiles(missing);
   };
 
+  // Retry every UID in a failure state. Mark them as "retrying" immediately
+  // so the import progress bar updates before the network call resolves.
+  const retryFailedFetches = () => {
+    const failed = items.filter(
+      (i) =>
+        i.fetch_status === "failed" ||
+        i.fetch_status === "rate_limited" ||
+        i.fetch_status === "not_found"
+    );
+    if (!failed.length) { toast("No failed items to retry"); return; }
+    const uids = failed.map((i) => i.uid);
+    // Reset per-UID retry counters so the auto-retry loop will pick up
+    // anything beyond the first batch slice.
+    for (const u of uids) {
+      retryCountsRef.current.delete(u);
+      unlockUid(u);
+    }
+    const failSet = new Set(uids);
+    setItems((prev) =>
+      prev.map((p) =>
+        failSet.has(p.uid)
+          ? { ...p, fetch_status: "retrying", fetch_error: null, fetch_last_attempt_at: null }
+          : p
+      )
+    );
+    // Kick the first slice now; the auto-retry loop drains the rest under
+    // the global concurrency gate.
+    fetchProfiles(uids.slice(0, 50));
+    toast.message(`Retrying ${uids.length} failed item${uids.length === 1 ? "" : "s"}`);
+  };
+
   const recheckAllInstagram = () => {
     const candidates = items.filter((i) => i.username || i.instagram_username);
     if (!candidates.length) { toast("No usernames to verify"); return; }
@@ -457,6 +488,18 @@ export default function Home() {
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={fetchMissing} disabled={fetching}>
           <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Fetch missing
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={retryFailedFetches}
+          disabled={fetching || importProgress.failed === 0}
+          title={`${importProgress.failed} failed item(s)`}
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${fetching ? "animate-spin" : ""}`} /> Retry failed
+          {importProgress.failed > 0 && (
+            <span className="ml-1.5 text-[10px] bg-muted-foreground/20 rounded px-1">{importProgress.failed}</span>
+          )}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setConfirmRecheck(true)} disabled={fetching || igProgress.total > 0}>
           <RefreshCw className={`w-4 h-4 mr-1 ${igProgress.total > 0 ? "animate-spin" : ""}`} /> Recheck IG
