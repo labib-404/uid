@@ -120,6 +120,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
+      await acquireSlot();
       const listSet = new Set(list);
       bumpStart(list.length);
       setItems((prev) =>
@@ -241,6 +242,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       list.forEach((u) => FETCH_LOCKS.delete(u));
       bumpEnd(list.length, okCount, failCount);
       setLoading(false);
+      releaseSlot();
     },
     [setItems]
   );
