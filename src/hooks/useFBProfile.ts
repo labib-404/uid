@@ -29,6 +29,22 @@ function classifyError(r?: ProfileResult | null): ErrKind | null {
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 
+// Global concurrency gate — caps simultaneous edge-function invocations so that
+// importing thousands of UIDs at once doesn't overwhelm the network or FB.
+const MAX_CONCURRENT_BATCHES = 2;
+let activeBatches = 0;
+const waitQueue: Array<() => void> = [];
+async function acquireSlot() {
+  if (activeBatches < MAX_CONCURRENT_BATCHES) { activeBatches++; return; }
+  await new Promise<void>((res) => waitQueue.push(res));
+  activeBatches++;
+}
+function releaseSlot() {
+  activeBatches = Math.max(0, activeBatches - 1);
+  const next = waitQueue.shift();
+  if (next) next();
+}
+
 // Per-UID completion lock — once a profile has all core fields, skip re-fetch.
 // Persisted across the session in localStorage so it survives reloads.
 const COMPLETE_KEY = "fb_complete_uids_v1";
@@ -104,6 +120,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);
+      await acquireSlot();
       const listSet = new Set(list);
       bumpStart(list.length);
       setItems((prev) =>
@@ -219,12 +236,14 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         bumpEnd(list.length, 0, list.length);
         list.forEach((u) => FETCH_LOCKS.delete(u));
         setLoading(false);
+        releaseSlot();
         return;
       } finally {
       }
       list.forEach((u) => FETCH_LOCKS.delete(u));
       bumpEnd(list.length, okCount, failCount);
       setLoading(false);
+      releaseSlot();
     },
     [setItems]
   );

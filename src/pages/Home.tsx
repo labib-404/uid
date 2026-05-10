@@ -89,8 +89,10 @@ export default function Home() {
       if (i.fetch_status === "done" && isIncomplete(i)) return true;
       return false;
     });
-    // Batch up to 50 candidates per scheduling tick to avoid flooding
-    for (const it of candidates.slice(0, 200)) {
+    // Batch a small number per scheduling tick to avoid flooding when there
+    // are thousands of items waiting. The global concurrency gate in
+    // useFBProfile keeps actual network pressure bounded.
+    for (const it of candidates.slice(0, 30)) {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
