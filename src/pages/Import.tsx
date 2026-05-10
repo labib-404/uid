@@ -4,7 +4,6 @@ import { Upload, FileText, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { useFBIds, genId } from "@/hooks/useFBIds";
 import { useFBProfile } from "@/hooks/useFBProfile";
 import { FBId } from "@/types/fbid";
@@ -19,7 +18,7 @@ export default function Import() {
   const lineCount = text.split("\n").filter((l) => l.trim()).length;
 
   const submit = () => {
-    if (!text.trim()) return toast.error("Paste some UIDs first");
+    if (!text.trim()) return;
     setBusy(true);
 
     const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -38,7 +37,7 @@ export default function Import() {
 
     if (!fresh.length) {
       setBusy(false);
-      return toast.info("All UIDs already exist");
+      return;
     }
 
     const now = new Date().toISOString();
@@ -56,7 +55,6 @@ export default function Import() {
 
     setItems([...newItems, ...items]);
     setBusy(false);
-    toast.success(`Imported ${newItems.length} (${parsed.length - fresh.length} duplicates skipped)`);
     setText("");
     nav("/");
 
