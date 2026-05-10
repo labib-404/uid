@@ -12,6 +12,8 @@ const isPreviewHost =
   window.location.hostname.includes("lovableproject.com");
 if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+} else {
+  import("./pwa-update").then((m) => m.setupPwaUpdate());
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
