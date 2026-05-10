@@ -31,7 +31,7 @@ const MOBILE_HEADERS: Record<string, string> = {
 async function tryFetch(
   url: string,
   headers: Record<string, string> = FB_HEADERS,
-  attempts = 5,
+  attempts = 2,
 ): Promise<{ html: string | null; rateLimited: boolean }> {
   let rateLimited = false;
   for (let i = 0; i < attempts; i++) {
@@ -39,7 +39,7 @@ async function tryFetch(
       const res = await fetch(url, {
         headers,
         redirect: "follow",
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(9000),
       });
       if (res.status === 429) { rateLimited = true; }
       else if (res.ok) {
@@ -47,7 +47,7 @@ async function tryFetch(
         if (text.length >= 500) return { html: text, rateLimited: false };
       }
     } catch { /* retry */ }
-    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 500 * Math.pow(2, i)));
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 350));
   }
   return { html: null, rateLimited };
 }
@@ -70,7 +70,7 @@ async function fetchFb(uid: string) {
   let anyRate = false;
   let anyNotFound = false;
   for (const { url, headers } of urls) {
-    const r = await tryFetch(url, headers, 4);
+    const r = await tryFetch(url, headers, 2);
     if (r.html) {
       // Detect FB's "page not found" / "content unavailable" interstitials inline.
       if (
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
 
     const results: Record<string, any> = {};
     // Limit concurrency to avoid Facebook rate-limiting on large batches.
-    const CONCURRENCY = 8;
+    const CONCURRENCY = 16;
     const queue = [...uids];
     const workers: Promise<void>[] = [];
     const processOne = async (uid: string) => {

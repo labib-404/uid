@@ -91,30 +91,52 @@ export default function Home() {
       if (i.fetch_status === "done" && isIncomplete(i)) return true;
       return false;
     });
-    // Batch a small number per scheduling tick to avoid flooding when there
-    // are thousands of items waiting. The global concurrency gate in
-    // useFBProfile keeps actual network pressure bounded.
-    for (const it of candidates.slice(0, 30)) {
+    // Group candidates by status so we can batch them into a single edge
+    // call per status bucket — sending one UID at a time was the main reason
+    // live fetches were slow and few results came back.
+    const buckets: Record<string, typeof candidates> = { rate_limited: [], not_found: [], other: [] };
+    for (const it of candidates) {
       if (retryTimersRef.current.has(it.uid)) continue;
       const tries = retryCountsRef.current.get(it.uid) ?? 0;
       if (tries >= MAX) continue;
-      // Status-aware backoff:
-      //  - rate_limited: longer (start 15s, cap 10min) — give FB time to forgive us
-      //  - not_found:    longer (start 60s, cap 15min) — likely permanent
-      //  - other:        normal (2s → 5min)
-      let delay: number;
-      if (it.fetch_status === "rate_limited") delay = Math.min(15_000 * Math.pow(1.8, tries), 600_000);
-      else if (it.fetch_status === "not_found") delay = Math.min(60_000 * Math.pow(2, tries), 900_000);
-      else delay = Math.min(2000 * Math.pow(2, tries), 300_000);
-      const timer = window.setTimeout(() => {
-        retryTimersRef.current.delete(it.uid);
-        retryEtaRef.current.delete(it.uid);
-        retryCountsRef.current.set(it.uid, tries + 1);
-        fetchProfiles([it.uid]);
-      }, delay);
-      retryTimersRef.current.set(it.uid, timer);
-      retryEtaRef.current.set(it.uid, Date.now() + delay);
+      const key = it.fetch_status === "rate_limited" ? "rate_limited"
+        : it.fetch_status === "not_found" ? "not_found" : "other";
+      buckets[key].push(it);
     }
+    const scheduleBatch = (group: typeof candidates, delay: number) => {
+      if (!group.length) return;
+      // Cap each batch to 50 (edge-function max). Extra items will be picked
+      // up on the next scheduling tick after this one fires.
+      const batch = group.slice(0, 50);
+      const eta = Date.now() + delay;
+      for (const it of batch) {
+        const tries = retryCountsRef.current.get(it.uid) ?? 0;
+        retryEtaRef.current.set(it.uid, eta);
+        // sentinel timer so candidate isn't re-scheduled while waiting
+        retryTimersRef.current.set(it.uid, 0 as unknown as number);
+        retryCountsRef.current.set(it.uid, tries + 1);
+      }
+      const timer = window.setTimeout(() => {
+        for (const it of batch) {
+          retryTimersRef.current.delete(it.uid);
+          retryEtaRef.current.delete(it.uid);
+        }
+        fetchProfiles(batch.map((b) => b.uid));
+      }, delay);
+      // Remember the real timer on the first uid so unmount-clear still works.
+      if (batch[0]) retryTimersRef.current.set(batch[0].uid, timer);
+    };
+    // Status-aware backoff per bucket. Use the *minimum* tries in the bucket
+    // so a fresh failure isn't punished by an older one's history.
+    const bucketDelay = (status: "rate_limited" | "not_found" | "other", group: typeof candidates) => {
+      const minTries = Math.min(...group.map((g) => retryCountsRef.current.get(g.uid) ?? 0));
+      if (status === "rate_limited") return Math.min(15_000 * Math.pow(1.8, minTries), 600_000);
+      if (status === "not_found") return Math.min(60_000 * Math.pow(2, minTries), 900_000);
+      return Math.min(2000 * Math.pow(2, minTries), 300_000);
+    };
+    if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
+    if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
+    if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
     // Clear retry counter for UIDs that have succeeded with usable data
     for (const it of items) {
       if (

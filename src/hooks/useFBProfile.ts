@@ -30,7 +30,7 @@ const FETCH_LOCKS = new Set<string>();
 
 // Global concurrency gate — caps simultaneous edge-function invocations so that
 // importing thousands of UIDs at once doesn't overwhelm the network or FB.
-const MAX_CONCURRENT_BATCHES = 2;
+const MAX_CONCURRENT_BATCHES = 4;
 let activeBatches = 0;
 const waitQueue: Array<() => void> = [];
 async function acquireSlot() {
