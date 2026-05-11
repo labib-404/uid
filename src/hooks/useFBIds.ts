@@ -14,10 +14,32 @@ function load(): FBId[] {
 
 let memCache: FBId[] | null = null;
 const listeners = new Set<(items: FBId[]) => void>();
+let persistTimer: number | null = null;
+
+function compactForStorage(items: FBId[]) {
+  return items.map((item) => {
+    if (item.photo_url?.startsWith("data:image/")) {
+      return { ...item, photo_url: null };
+    }
+    return item;
+  });
+}
+
+function writeStorage(items: FBId[]) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(compactForStorage(items))); } catch {}
+}
+
+function scheduleStorageWrite(items: FBId[]) {
+  if (persistTimer !== null) window.clearTimeout(persistTimer);
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null;
+    writeStorage(items);
+  }, 350);
+}
 
 function persist(items: FBId[]) {
   memCache = items;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  scheduleStorageWrite(items);
   listeners.forEach((l) => l(items));
 }
 
@@ -29,6 +51,14 @@ export function useFBIds() {
     const l = (next: FBId[]) => setItemsState(next);
     listeners.add(l);
     return () => { listeners.delete(l); };
+  }, []);
+
+  useEffect(() => {
+    const flush = () => {
+      if (memCache) writeStorage(memCache);
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
   }, []);
 
   const setItems = useCallback((updater: FBId[] | ((prev: FBId[]) => FBId[])) => {
