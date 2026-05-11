@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FBId } from "@/types/fbid";
 
@@ -27,6 +27,7 @@ function classifyError(r?: ProfileResult | null): ErrKind | null {
 
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
+const EMPTY_PROGRESS = { done: 0, total: 0, processing: 0, success: 0, failed: 0 };
 
 // Global concurrency gate — caps simultaneous edge-function invocations so that
 // importing thousands of UIDs at once doesn't overwhelm the network or FB.
@@ -82,29 +83,34 @@ function hasUsefulProfileResult(result?: ProfileResult | null) {
 
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
+  const progressRef = useRef(EMPTY_PROGRESS);
   const [igProgress, setIgProgress] = useState<{
     done: number;
     total: number;
     processing: number;
     success: number;
     failed: number;
-  }>({ done: 0, total: 0, processing: 0, success: 0, failed: 0 });
+  }>(EMPTY_PROGRESS);
 
-  const bumpStart = (n: number) =>
-    setIgProgress((p) => ({ ...p, total: p.total + n, processing: p.processing + n }));
-  const bumpEnd = (n: number, ok = 0, fail = 0) =>
-    setIgProgress((p) => {
-      const next = {
-        ...p,
-        done: p.done + n,
-        processing: Math.max(0, p.processing - n),
-        success: p.success + ok,
-        failed: p.failed + fail,
-      };
-      return next.done >= next.total
-        ? { done: 0, total: 0, processing: 0, success: 0, failed: 0 }
-        : next;
-    });
+  const bumpStart = (n: number) => {
+    progressRef.current = {
+      ...progressRef.current,
+      total: progressRef.current.total + n,
+      processing: progressRef.current.processing + n,
+    };
+    setIgProgress(progressRef.current);
+  };
+  const bumpEnd = (n: number, ok = 0, fail = 0) => {
+    const next = {
+      ...progressRef.current,
+      done: progressRef.current.done + n,
+      processing: Math.max(0, progressRef.current.processing - n),
+      success: progressRef.current.success + ok,
+      failed: progressRef.current.failed + fail,
+    };
+    progressRef.current = next.done >= next.total ? EMPTY_PROGRESS : next;
+    setIgProgress(progressRef.current);
+  };
 
   const fetchProfiles = useCallback(
     async (uids: string[]) => {
