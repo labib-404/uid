@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FBId } from "@/types/fbid";
 
@@ -27,6 +27,7 @@ function classifyError(r?: ProfileResult | null): ErrKind | null {
 
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
+const EMPTY_PROGRESS = { done: 0, total: 0, processing: 0, success: 0, failed: 0 };
 
 // Global concurrency gate — caps simultaneous edge-function invocations so that
 // importing thousands of UIDs at once doesn't overwhelm the network or FB.
@@ -82,29 +83,34 @@ function hasUsefulProfileResult(result?: ProfileResult | null) {
 
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
+  const progressRef = useRef(EMPTY_PROGRESS);
   const [igProgress, setIgProgress] = useState<{
     done: number;
     total: number;
     processing: number;
     success: number;
     failed: number;
-  }>({ done: 0, total: 0, processing: 0, success: 0, failed: 0 });
+  }>(EMPTY_PROGRESS);
 
-  const bumpStart = (n: number) =>
-    setIgProgress((p) => ({ ...p, total: p.total + n, processing: p.processing + n }));
-  const bumpEnd = (n: number, ok = 0, fail = 0) =>
-    setIgProgress((p) => {
-      const next = {
-        ...p,
-        done: p.done + n,
-        processing: Math.max(0, p.processing - n),
-        success: p.success + ok,
-        failed: p.failed + fail,
-      };
-      return next.done >= next.total
-        ? { done: 0, total: 0, processing: 0, success: 0, failed: 0 }
-        : next;
-    });
+  const bumpStart = (n: number) => {
+    progressRef.current = {
+      ...progressRef.current,
+      total: progressRef.current.total + n,
+      processing: progressRef.current.processing + n,
+    };
+    setIgProgress(progressRef.current);
+  };
+  const bumpEnd = (n: number, ok = 0, fail = 0) => {
+    const next = {
+      ...progressRef.current,
+      done: progressRef.current.done + n,
+      processing: Math.max(0, progressRef.current.processing - n),
+      success: progressRef.current.success + ok,
+      failed: progressRef.current.failed + fail,
+    };
+    progressRef.current = next.done >= next.total ? EMPTY_PROGRESS : next;
+    setIgProgress(progressRef.current);
+  };
 
   const fetchProfiles = useCallback(
     async (uids: string[]) => {
@@ -120,13 +126,15 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       await acquireSlot();
       const listSet = new Set(list);
       bumpStart(list.length);
-      setItems((prev) =>
-        prev.map((p) =>
-          listSet.has(p.uid)
-            ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
-            : p
-        )
-      );
+      if (list.length <= 3) {
+        setItems((prev) =>
+          prev.map((p) =>
+            listSet.has(p.uid)
+              ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
+              : p
+          )
+        );
+      }
       const runOnce = async (force = false) => {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
           body: { uids: list, force },
@@ -146,13 +154,16 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             return k === "rate_limited" || k === "network" || k === "empty";
           });
           if (!retryable.length) break;
-          setItems((prev) =>
-            prev.map((p) =>
-              retryable.includes(p.uid)
-                ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
-                : p
-            )
-          );
+          if (retryable.length <= 3) {
+            const retrySet = new Set(retryable);
+            setItems((prev) =>
+              prev.map((p) =>
+                retrySet.has(p.uid)
+                  ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
+                  : p
+              )
+            );
+          }
           // Longer backoff when rate-limited is in the mix
           const hasRate = retryable.some((u) => classifyError(results[u]) === "rate_limited");
           const base = hasRate ? 2500 : 1200;
@@ -167,10 +178,10 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             }
           } catch { /* keep retrying */ }
         }
-        setItems((prev) =>
-          prev.map((p) => {
+        setItems((prev) => {
+          const nowIso = new Date().toISOString();
+          return prev.map((p) => {
             const r = results[p.uid];
-            const nowIso = new Date().toISOString();
             if (!r) {
               return listSet.has(p.uid)
                 ? { ...p, instagram_checking: false, fetch_status: "failed", fetch_error: "no response", fetch_last_attempt_at: nowIso }
@@ -207,8 +218,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               fetch_error: null,
               fetch_last_attempt_at: nowIso,
             };
-          })
-        );
+          });
+        });
         // Persist completion lock for any UID that now has all 4 core fields.
         for (const p of list) {
           const r = results[p];
