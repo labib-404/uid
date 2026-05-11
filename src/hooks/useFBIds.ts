@@ -8,7 +8,12 @@ function load(): FBId[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
+    if (!Array.isArray(arr)) return [];
+    const compacted = compactForStorage(arr as FBId[]);
+    if (raw.includes('"photo_url":"data:image/')) {
+      window.setTimeout(() => writeStorage(compacted), 0);
+    }
+    return compacted;
   } catch { return []; }
 }
 
