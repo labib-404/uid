@@ -126,13 +126,15 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       await acquireSlot();
       const listSet = new Set(list);
       bumpStart(list.length);
-      setItems((prev) =>
-        prev.map((p) =>
-          listSet.has(p.uid)
-            ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
-            : p
-        )
-      );
+      if (list.length <= 3) {
+        setItems((prev) =>
+          prev.map((p) =>
+            listSet.has(p.uid)
+              ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
+              : p
+          )
+        );
+      }
       const runOnce = async (force = false) => {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
           body: { uids: list, force },
@@ -152,13 +154,16 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             return k === "rate_limited" || k === "network" || k === "empty";
           });
           if (!retryable.length) break;
-          setItems((prev) =>
-            prev.map((p) =>
-              retryable.includes(p.uid)
-                ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
-                : p
-            )
-          );
+          if (retryable.length <= 3) {
+            const retrySet = new Set(retryable);
+            setItems((prev) =>
+              prev.map((p) =>
+                retrySet.has(p.uid)
+                  ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
+                  : p
+              )
+            );
+          }
           // Longer backoff when rate-limited is in the mix
           const hasRate = retryable.some((u) => classifyError(results[u]) === "rate_limited");
           const base = hasRate ? 2500 : 1200;
@@ -173,10 +178,10 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             }
           } catch { /* keep retrying */ }
         }
-        setItems((prev) =>
-          prev.map((p) => {
+        setItems((prev) => {
+          const nowIso = new Date().toISOString();
+          return prev.map((p) => {
             const r = results[p.uid];
-            const nowIso = new Date().toISOString();
             if (!r) {
               return listSet.has(p.uid)
                 ? { ...p, instagram_checking: false, fetch_status: "failed", fetch_error: "no response", fetch_last_attempt_at: nowIso }
@@ -213,8 +218,8 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               fetch_error: null,
               fetch_last_attempt_at: nowIso,
             };
-          })
-        );
+          });
+        });
         // Persist completion lock for any UID that now has all 4 core fields.
         for (const p of list) {
           const r = results[p];
