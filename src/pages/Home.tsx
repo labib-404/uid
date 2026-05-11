@@ -65,6 +65,7 @@ export default function Home() {
   const retryEtaRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
+    const scanLimit = 300;
     const MAX = 15;
     const NOT_FOUND_MAX = 3; // give up quickly on profiles that look truly missing
     const COOLDOWN_MS = 30_000; // never re-attempt a UID more than once per 30s
@@ -73,7 +74,8 @@ export default function Home() {
     const isComplete = (i: typeof items[number]) =>
       !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
     const now = Date.now();
-    const candidates = items.filter((i) => {
+    const candidates: typeof items = [];
+    for (const i of items) {
       if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") return false;
       // LOCK: once a UID has full data (name + username + photo + followers), never re-fetch.
       if (isComplete(i)) return false;
@@ -83,14 +85,16 @@ export default function Home() {
       if (i.fetch_status === "not_found") {
         const tries = retryCountsRef.current.get(i.uid) ?? 0;
         if (tries >= NOT_FOUND_MAX) return false;
-        return true;
+        candidates.push(i);
+      } else if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") {
+        candidates.push(i);
+      } else if (!i.fetch_status && isIncomplete(i)) {
+        candidates.push(i);
+      } else if (i.fetch_status === "done" && isIncomplete(i)) {
+        candidates.push(i);
       }
-      if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") return true;
-      // Never fetched or fetched but missing core fields → re-queue
-      if (!i.fetch_status && isIncomplete(i)) return true;
-      if (i.fetch_status === "done" && isIncomplete(i)) return true;
-      return false;
-    });
+      if (candidates.length >= scanLimit) break;
+    }
     // Group candidates by status so we can batch them into a single edge
     // call per status bucket — sending one UID at a time was the main reason
     // live fetches were slow and few results came back.
@@ -107,7 +111,7 @@ export default function Home() {
       if (!group.length) return;
       // Cap each batch to 50 (edge-function max). Extra items will be picked
       // up on the next scheduling tick after this one fires.
-      const batch = group.slice(0, 50);
+      const batch = group.slice(0, 25);
       const eta = Date.now() + delay;
       for (const it of batch) {
         const tries = retryCountsRef.current.get(it.uid) ?? 0;
@@ -137,16 +141,6 @@ export default function Home() {
     if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
     if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
     if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
-    // Clear retry counter for UIDs that have succeeded with usable data
-    for (const it of items) {
-      if (
-        it.fetch_status === "done" &&
-        (it.real_name || it.username || it.photo_url) &&
-        retryCountsRef.current.has(it.uid)
-      ) {
-        retryCountsRef.current.delete(it.uid);
-      }
-    }
     return () => {
       // do not clear timers on every render — only on unmount
     };
