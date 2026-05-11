@@ -76,15 +76,15 @@ export default function Home() {
     const now = Date.now();
     const candidates: typeof items = [];
     for (const i of items) {
-      if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") return false;
+      if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") continue;
       // LOCK: once a UID has full data (name + username + photo + followers), never re-fetch.
-      if (isComplete(i)) return false;
+      if (isComplete(i)) continue;
       // Cooldown: don't hammer a UID we just tried.
-      if (i.fetch_last_attempt_at && now - new Date(i.fetch_last_attempt_at).getTime() < COOLDOWN_MS) return false;
+      if (i.fetch_last_attempt_at && now - new Date(i.fetch_last_attempt_at).getTime() < COOLDOWN_MS) continue;
       // Cap not_found retries — these are usually permanently missing.
       if (i.fetch_status === "not_found") {
         const tries = retryCountsRef.current.get(i.uid) ?? 0;
-        if (tries >= NOT_FOUND_MAX) return false;
+        if (tries >= NOT_FOUND_MAX) continue;
         candidates.push(i);
       } else if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") {
         candidates.push(i);
