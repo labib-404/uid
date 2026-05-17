@@ -1,11 +1,10 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
 import { useFBProfile, unlockUid, lockUidsComplete } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
 import { scanInWorker } from "@/workers/heavyClient";
-import FBIdItem from "@/components/FBIdItem";
 import NoteDialog from "@/components/NoteDialog";
 import VirtualFBList from "@/components/VirtualFBList";
 import { Input } from "@/components/ui/input";
@@ -570,28 +569,3 @@ export default function Home() {
     </div>
   );
 }
-
-type RowProps = {
-  item: FBId;
-  selected: boolean;
-  onToggleSelect: (id: string) => void;
-  onChange: (next: FBId) => void;
-  onDelete: (item: FBId) => void;
-  onOpenNote: (item: FBId) => void;
-  onFetchProfile: (uid: string) => void;
-  onRecheckInstagram: (item: FBId) => void;
-};
-const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile, onRecheckInstagram }: RowProps) {
-  return (
-    <FBIdItem
-      item={item}
-      selected={selected}
-      onToggleSelect={() => onToggleSelect(item.id)}
-      onChange={onChange}
-      onDelete={() => onDelete(item)}
-      onOpenNote={() => onOpenNote(item)}
-      onFetchProfile={() => onFetchProfile(item.uid)}
-      onRecheckInstagram={() => onRecheckInstagram(item)}
-    />
-  );
-});
