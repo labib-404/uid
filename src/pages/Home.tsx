@@ -365,9 +365,26 @@ export default function Home() {
         i.fetch_status === "not_found"
       ) failed++;
     }
-    return { tracked, done, retrying, failed };
+    return { tracked, done, retrying, failed, processed: done + failed };
   }, [items]);
-  const showImportBar = importProgress.retrying > 0 || igProgress.total > 0;
+  const isImportActive = importProgress.retrying > 0 || igProgress.total > 0;
+  const [showFinishedImportBar, setShowFinishedImportBar] = useState(false);
+  const hadActiveImportRef = useRef(false);
+  useEffect(() => {
+    if (isImportActive) {
+      hadActiveImportRef.current = true;
+      setShowFinishedImportBar(false);
+      return;
+    }
+    if (!hadActiveImportRef.current || importProgress.tracked === 0) return;
+    setShowFinishedImportBar(true);
+    const t = window.setTimeout(() => {
+      hadActiveImportRef.current = false;
+      setShowFinishedImportBar(false);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [isImportActive, importProgress.tracked, importProgress.processed]);
+  const showImportBar = isImportActive || showFinishedImportBar;
   // Global thin loader: visible while we're still fetching profile data,
   // OR while items exist but none have resolved any profile fields yet
   // (covers the gap between "just imported" and "first batch returns").
