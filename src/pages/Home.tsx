@@ -371,7 +371,16 @@ export default function Home() {
   const igCandidatesCount = listSummary.igCandidates;
   const failedIgCount = listSummary.failedIg;
 
-  const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
+  const fetchOne = useCallback(
+    (uid: string) => {
+      // Manual per-item retry: always bypass the completion lock and any
+      // stale in-flight guard so the request actually fires.
+      unlockUid(uid);
+      retryCountsRef.current.delete(uid);
+      return fetchProfiles([uid]);
+    },
+    [fetchProfiles]
+  );
   const recheckOne = useCallback(
     (item: FBId) =>
       recheckInstagram(
