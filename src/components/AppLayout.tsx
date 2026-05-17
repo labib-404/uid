@@ -34,7 +34,7 @@ export default function AppLayout() {
 
   return (
     <div className={`min-h-screen ${fontClass} pb-24 bg-background text-foreground`}>
-      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
+      <header className="sticky top-0 z-30 glass border-b border-white/5">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button onClick={() => navigate("/")} className="flex items-baseline gap-1.5 text-left">
             <span className="text-lg font-semibold">UID</span>
@@ -46,7 +46,7 @@ export default function AppLayout() {
             onClick={() => setViewMode(viewMode === "compact" ? "full" : "compact")}
             title={`Switch to ${viewMode === "compact" ? "full" : "compact"} view`}
             aria-label="Toggle view mode"
-            className="p-2 border border-border rounded-md hover:bg-secondary transition-colors"
+            className="p-2 border border-white/10 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
           >
             {viewMode === "compact" ? <LayoutGrid className="w-4 h-4" /> : <Rows className="w-4 h-4" />}
             </button>
@@ -58,20 +58,27 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)] bg-background border-t border-border">
-        <div className="max-w-3xl mx-auto px-2">
-          <div className="flex items-stretch justify-around">
-            {tabs.map((t) => (
-              <NavLink key={t.to} to={t.to} end className="flex-1">
-                {({ isActive }) => (
-                  <div className={`flex flex-col items-center justify-center py-2.5 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                    <t.icon className="w-5 h-5" strokeWidth={isActive ? 2.25 : 1.75} />
-                    <span className="text-[10px] mt-1">{t.label}</span>
-                  </div>
-                )}
-              </NavLink>
-            ))}
-          </div>
+      <nav
+        className="fixed left-1/2 -translate-x-1/2 bottom-3 z-40 w-[min(92%,28rem)]"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="glass rounded-[28px] shadow-2xl p-1.5 flex items-stretch justify-between">
+          {tabs.map((t) => (
+            <NavLink key={t.to} to={t.to} end className="flex-1">
+              {({ isActive }) => (
+                <div
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl transition-colors ${
+                    isActive
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <t.icon className="w-5 h-5" strokeWidth={isActive ? 2.25 : 1.75} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{t.label}</span>
+                </div>
+              )}
+            </NavLink>
+          ))}
         </div>
       </nav>
     </div>
