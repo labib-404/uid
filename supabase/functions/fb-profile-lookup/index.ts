@@ -383,13 +383,14 @@ Deno.serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    // Allow service-role calls (e.g. from fb-profile-refresh)
-    const isServiceRole = token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    let authorized = isServiceRole;
+    // Accept project keys (anon / service-role) — gates the function to this project only
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    let authorized = token === anonKey || token === serviceKey;
     if (!authorized) {
       const authClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
+        anonKey!,
       );
       const { data, error: userErr } = await authClient.auth.getUser(token);
       authorized = !userErr && !!data?.user;
