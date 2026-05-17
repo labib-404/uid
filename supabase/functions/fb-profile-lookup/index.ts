@@ -39,6 +39,26 @@ function collectConfiguredKeys(): Set<string> {
   return keys;
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isProjectAnonKey(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  const projectRef = Deno.env.get("SUPABASE_URL")?.match(/https:\/\/([^.]+)\./)?.[1];
+  const exp = typeof payload.exp === "number" ? payload.exp : 0;
+  return payload.iss === "supabase" && payload.role === "anon" && payload.ref === projectRef && exp > Math.floor(Date.now() / 1000);
+}
+
 function formatFollowers(raw: string): string {
   const n = parseInt(raw.replace(/,/g, ""), 10);
   if (isNaN(n)) return raw;
