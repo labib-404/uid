@@ -217,6 +217,7 @@ export default function Home() {
       case "noted": out = out.filter((i) => i.note); break;
       case "tagged": out = out.filter((i) => i.tag); break;
     }
+    if (sort === "newest") return out;
     out = [...out].sort((a, b) => {
       switch (sort) {
         case "oldest": return a.created_at.localeCompare(b.created_at);
@@ -340,18 +341,34 @@ export default function Home() {
     );
   };
 
-  const igCandidatesCount = useMemo(
-    () => items.filter((i) => i.username || i.instagram_username).length,
-    [items]
-  );
+  const listSummary = useMemo(() => {
+    const isComplete = (i: FBId) =>
+      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
+    let checked = 0, saved = 0, firstResolved = false, igCandidates = 0, failedIg = 0;
+    let done = 0, retrying = 0, failed = 0, tracked = 0;
+    for (const i of items) {
+      if (i.visited) checked++;
+      if (i.pinned) saved++;
+      if (!firstResolved && (i.real_name || i.username || i.photo_url)) firstResolved = true;
+      if (i.username || i.instagram_username) igCandidates++;
+      if (i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited") failedIg++;
+      const complete = isComplete(i);
+      const hasState = !!i.fetch_status || complete;
+      if (!hasState) continue;
+      tracked++;
+      if (complete || i.fetch_status === "done") done++;
+      else if (i.fetch_status === "pending" || i.fetch_status === "retrying") retrying++;
+      else if (
+        i.fetch_status === "failed" ||
+        i.fetch_status === "rate_limited" ||
+        i.fetch_status === "not_found"
+      ) failed++;
+    }
+    return { checked, saved, firstResolved, igCandidates, failedIg, importProgress: { tracked, done, retrying, failed, processed: done + failed } };
+  }, [items]);
 
-  const failedIgCount = useMemo(
-    () =>
-      items.filter(
-        (i) => i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited"
-      ).length,
-    [items]
-  );
+  const igCandidatesCount = listSummary.igCandidates;
+  const failedIgCount = listSummary.failedIg;
 
   const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
   const recheckOne = useCallback(
