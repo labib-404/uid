@@ -64,16 +64,13 @@ export default function Import() {
     setText("");
     nav("/");
 
-    // Auto-fetch profiles in background. Only kick off the first slice here;
-    // the Home auto-retry loop + global concurrency gate will gradually pick up
-    // the rest. This prevents pasting 2-3k UIDs from saturating the network.
+    // Auto-fetch profiles in background with one steady queue so large imports
+    // don't saturate the network or leave pending rows stuck indefinitely.
     (async () => {
       const uids = newItems.map((i) => i.uid);
       const BATCH = 35;
       const PARALLEL = 1;
-      const PRIME = Math.min(uids.length, BATCH * 2); // first ~70
-      const primeUids = uids.slice(0, PRIME);
-      const batches = await chunkInWorker(primeUids, BATCH);
+      const batches = await chunkInWorker(uids, BATCH);
       let cursor = 0;
       const worker = async () => {
         while (cursor < batches.length) {
