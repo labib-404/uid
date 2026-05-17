@@ -217,8 +217,19 @@ function parseProfile(html: string, uid: string) {
   ]) {
     const m = html.match(p);
     if (m) {
-      nationality = m[1].trim();
-      break;
+      const v = m[1].trim();
+      // Reject garbage matches (HTML/JSON noise, entities, control chars, overly long)
+      if (
+        v.length >= 2 &&
+        v.length <= 60 &&
+        !/[<>{}\\]/.test(v) &&
+        !/&[a-z#0-9]+;/i.test(v) &&
+        !/[":;]/.test(v) &&
+        /^[\p{L}][\p{L}\p{M}\s,.'\-]+$/u.test(v)
+      ) {
+        nationality = v;
+        break;
+      }
     }
   }
 
@@ -274,6 +285,9 @@ async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
     if (!ct.startsWith("image/")) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
     if (buf.length < 200 || buf.length > 600_000) return null;
+    // Reject Facebook's default silhouette avatar (returned as a small GIF
+    // when the real photo isn't accessible). Heuristic: small GIF payload.
+    if (ct.includes("gif") || buf.length < 3500) return null;
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     return `data:${ct};base64,${btoa(bin)}`;
