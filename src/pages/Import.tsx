@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useFBIds, genId } from "@/hooks/useFBIds";
-import { useFBProfile } from "@/hooks/useFBProfile";
+import { useFBProfile, unlockUid } from "@/hooks/useFBProfile";
 import { chunkInWorker } from "@/workers/heavyClient";
 import { FBId } from "@/types/fbid";
 
@@ -68,6 +68,9 @@ export default function Import() {
     // don't saturate the network or leave pending rows stuck indefinitely.
     (async () => {
       const uids = newItems.map((i) => i.uid);
+      // Newly-imported UIDs must bypass any leftover COMPLETE_LOCKS / FETCH_LOCKS
+      // from a prior session so the first fetch always fires.
+      for (const u of uids) unlockUid(u);
       const BATCH = 15;
       const PARALLEL = 1;
       const batches = await chunkInWorker(uids, BATCH);
