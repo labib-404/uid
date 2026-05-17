@@ -411,8 +411,7 @@ Deno.serve(async (req) => {
     // the public key under either SUPABASE_ANON_KEY or SUPABASE_PUBLISHABLE_KEY depending on runtime.
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
     const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")?.trim();
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-    const projectKeys = new Set([anonKey, publishableKey, serviceKey].filter(Boolean));
+    const projectKeys = collectConfiguredKeys();
     let authorized = projectKeys.has(token) || (!!apiKey && projectKeys.has(apiKey));
     if (!authorized) {
       const authClient = createClient(
