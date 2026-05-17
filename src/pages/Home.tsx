@@ -377,7 +377,7 @@ export default function Home() {
         </p>
       </div>
       {showImportBar && (
-        <div className="sticky top-0 z-30 -mx-1">
+        <div className="sticky top-14 z-20 -mx-1">
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
               <RefreshCw className="w-3 h-3 animate-spin text-primary" />
