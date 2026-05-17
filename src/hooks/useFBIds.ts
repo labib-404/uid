@@ -39,7 +39,7 @@ function compactForStorage(items: FBId[]) {
 }
 
 function writeStorage(items: FBId[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* storage may be full or unavailable */ }
 }
 
 function scheduleStorageWrite(items: FBId[]) {
