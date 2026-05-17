@@ -126,15 +126,19 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       await acquireSlot();
       const listSet = new Set(list);
       bumpStart(list.length);
-      if (list.length <= 3) {
-        setItems((prev) =>
-          prev.map((p) =>
-            listSet.has(p.uid)
-              ? { ...p, instagram_checking: true, fetch_status: "pending", fetch_attempts: 1 }
-              : p
-          )
-        );
-      }
+      setItems((prev) =>
+        prev.map((p) =>
+          listSet.has(p.uid)
+            ? {
+                ...p,
+                instagram_checking: true,
+                fetch_status: "pending",
+                fetch_attempts: 1,
+                fetch_last_attempt_at: new Date().toISOString(),
+              }
+            : p
+        )
+      );
       const runOnce = async (force = false) => {
         const { data, error } = await supabase.functions.invoke("fb-profile-lookup", {
           body: { uids: list, force },
@@ -154,16 +158,14 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
             return k === "rate_limited" || k === "network" || k === "empty";
           });
           if (!retryable.length) break;
-          if (retryable.length <= 3) {
-            const retrySet = new Set(retryable);
-            setItems((prev) =>
-              prev.map((p) =>
-                retrySet.has(p.uid)
-                  ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
-                  : p
-              )
-            );
-          }
+          const retrySet = new Set(retryable);
+          setItems((prev) =>
+            prev.map((p) =>
+              retrySet.has(p.uid)
+                ? { ...p, fetch_status: "retrying", fetch_attempts: attempt }
+                : p
+            )
+          );
           // Longer backoff when rate-limited is in the mix
           const hasRate = retryable.some((u) => classifyError(results[u]) === "rate_limited");
           const base = hasRate ? 2500 : 1200;
