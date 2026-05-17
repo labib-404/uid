@@ -42,7 +42,10 @@ function notifyListeners() {
 function compactForStorage(items: FBId[]) {
   return items.map((item) => {
     if (item.photo_url?.startsWith("data:image/")) {
-      return { ...item, photo_url: null };
+      const stablePhotoUrl = /^\d+$/.test(item.uid)
+        ? `https://graph.facebook.com/${item.uid}/picture?type=large&width=200&height=200`
+        : item.photo_url;
+      return { ...item, photo_url: stablePhotoUrl };
     }
     return item;
   });
