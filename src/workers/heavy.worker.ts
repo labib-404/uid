@@ -7,13 +7,13 @@
 // Worker is intentionally schema-loose ({uid, fetch_status, ...}) so we don't
 // have to ship the FBId type into the worker bundle.
 
-type AnyItem = Record<string, any>;
+type WorkerItem = Record<string, unknown>;
 
-type CompactReq = { id: number; kind: "compact"; items: AnyItem[] };
+type CompactReq = { id: number; kind: "compact"; items: WorkerItem[] };
 type ScanReq = {
   id: number;
   kind: "scan";
-  items: AnyItem[];
+  items: WorkerItem[];
   retryCounts: Array<[string, number]>;
   scheduledUids: string[]; // uids already waiting for a retry timer
   now: number;
@@ -22,18 +22,29 @@ type ScanReq = {
   notFoundMax: number;
   cooldownMs: number;
 };
-type ChunkReq = { id: number; kind: "chunk"; items: any[]; size: number };
+type ChunkReq = { id: number; kind: "chunk"; items: unknown[]; size: number };
 type Req = CompactReq | ScanReq | ChunkReq;
 
-function compact(items: AnyItem[]) {
+type ScanBuckets = {
+  rate_limited: Array<{ uid: string; tries: number }>;
+  not_found: Array<{ uid: string; tries: number }>;
+  other: Array<{ uid: string; tries: number }>;
+};
+type WorkerResult = WorkerItem[] | ScanBuckets | unknown[][];
+
+function compact(items: WorkerItem[]) {
   // Preserve base64 photo_url so reloads keep the actual fetched avatar.
   return items;
 }
 
-function isComplete(i: AnyItem) {
+function asString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function isComplete(i: WorkerItem) {
   return !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
 }
-function isIncomplete(i: AnyItem) {
+function isIncomplete(i: WorkerItem) {
   return !i.real_name || !i.username || !i.photo_url || !i.follower_count;
 }
 
