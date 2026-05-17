@@ -403,32 +403,15 @@ export default function Home() {
   };
 
   const stats = useMemo(() => [
-    { label: "Total",   val: items.length,                              color: "text-foreground" },
-    { label: "Checked", val: items.filter((i) => i.visited).length,     color: "text-primary" },
-    { label: "Left",    val: items.filter((i) => !i.visited).length,    color: "text-accent" },
-    { label: "Saved",   val: items.filter((i) => i.pinned).length,      color: "text-foreground italic" },
-  ], [items]);
+    { label: "Total",   val: items.length,                         color: "text-foreground" },
+    { label: "Checked", val: listSummary.checked,                  color: "text-primary" },
+    { label: "Left",    val: items.length - listSummary.checked,   color: "text-accent" },
+    { label: "Saved",   val: listSummary.saved,                    color: "text-foreground italic" },
+  ], [items.length, listSummary.checked, listSummary.saved]);
 
   // Import / fetch progress derived from item state — reflects the true
   // pipeline (done / retrying / failed) across all imported UIDs.
-  const importProgress = useMemo(() => {
-    const isComplete = (i: FBId) =>
-      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
-    let done = 0, retrying = 0, failed = 0, tracked = 0;
-    for (const i of items) {
-      const hasState = !!i.fetch_status || isComplete(i);
-      if (!hasState) continue;
-      tracked++;
-      if (isComplete(i) || i.fetch_status === "done") done++;
-      else if (i.fetch_status === "pending" || i.fetch_status === "retrying") retrying++;
-      else if (
-        i.fetch_status === "failed" ||
-        i.fetch_status === "rate_limited" ||
-        i.fetch_status === "not_found"
-      ) failed++;
-    }
-    return { tracked, done, retrying, failed, processed: done + failed };
-  }, [items]);
+  const importProgress = listSummary.importProgress;
   const isImportActive = importProgress.retrying > 0 || igProgress.total > 0;
   const [showFinishedImportBar, setShowFinishedImportBar] = useState(false);
   const hadActiveImportRef = useRef(false);
@@ -450,14 +433,10 @@ export default function Home() {
   // Global thin loader: visible while we're still fetching profile data,
   // OR while items exist but none have resolved any profile fields yet
   // (covers the gap between "just imported" and "first batch returns").
-  const firstResolved = useMemo(
-    () => items.some((i) => i.real_name || i.username || i.photo_url),
-    [items]
-  );
   const showTopLoader =
     importProgress.retrying > 0 ||
     igProgress.processing > 0 ||
-    (items.length > 0 && !firstResolved);
+    (items.length > 0 && !listSummary.firstResolved);
 
   // Queued-count snapshot updates only when the retry pipeline mutates,
   // not every second — the countdown itself ticks inside a child component
