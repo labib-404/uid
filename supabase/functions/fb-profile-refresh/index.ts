@@ -14,12 +14,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Only allow calls authenticated with the service-role key (e.g. pg_cron).
-    // Prevents this function — which reads ALL users' rows via service role — from being publicly triggered.
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    if (!token || token !== serviceKey) {
+    // Require shared cron secret — this function reads ALL users' rows via service role
+    const expected = Deno.env.get("CRON_SECRET");
+    const provided = req.headers.get("x-cron-secret");
+    if (!expected || provided !== expected) {
       return json({ error: "Forbidden" }, 403);
     }
 
