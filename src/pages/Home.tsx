@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
 import { useFBProfile, unlockUid, lockUidsComplete } from "@/hooks/useFBProfile";
@@ -645,12 +644,8 @@ export default function Home() {
         </Select>
       </div>
 
-      <AnimatePresence>
-        {selected.size > 0 && (
-          <motion.div
-            initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
-            className="glass rounded-xl p-2 flex items-center gap-1 flex-wrap sticky top-14 z-20"
-          >
+      {selected.size > 0 && (
+        <div className="glass rounded-xl p-2 flex items-center gap-1 flex-wrap sticky top-14 z-20 animate-fade-in">
             <span className="text-sm font-bold px-2 text-primary">{selected.size}</span>
             <Button size="sm" variant="ghost" onClick={() => bulkUpdate({ visited: true, visited_at: new Date().toISOString() })}>
               <Check className="w-4 h-4 mr-1" /> Check
@@ -680,9 +675,8 @@ export default function Home() {
             <Button size="sm" variant="ghost" onClick={clearSel} className="ml-auto">
               <X className="w-4 h-4" />
             </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={fetchMissing} disabled={fetching}>
