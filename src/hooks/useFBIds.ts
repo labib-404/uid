@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { FBId } from "@/types/fbid";
+import { compactInWorker } from "@/workers/heavyClient";
 
 const STORAGE_KEY = "fb_ids_v1";
 
@@ -9,11 +10,17 @@ function load(): FBId[] {
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    const compacted = compactForStorage(arr as FBId[]);
+    const items = arr as FBId[];
     if (raw.includes('"photo_url":"data:image/')) {
-      window.setTimeout(() => writeStorage(compacted), 0);
+      // Offload the strip-base64 pass to the worker, then re-persist.
+      compactInWorker(items).then((compacted) => {
+        memCache = compacted;
+        writeStorage(compacted);
+        listeners.forEach((l) => l(compacted));
+      }).catch(() => {});
+      return compactForStorage(items);
     }
-    return compacted;
+    return items;
   } catch { return []; }
 }
 
@@ -31,14 +38,17 @@ function compactForStorage(items: FBId[]) {
 }
 
 function writeStorage(items: FBId[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(compactForStorage(items))); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
 }
 
 function scheduleStorageWrite(items: FBId[]) {
   if (persistTimer !== null) window.clearTimeout(persistTimer);
   persistTimer = window.setTimeout(() => {
     persistTimer = null;
-    writeStorage(items);
+    // Compact in a worker so big base64 stripping doesn't block the UI.
+    compactInWorker(items)
+      .then((compacted) => writeStorage(compacted))
+      .catch(() => writeStorage(compactForStorage(items)));
   }, 350);
 }
 
