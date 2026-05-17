@@ -3,6 +3,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const FB_HEADERS: Record<string, string> = {
   accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "accept-language": "en-US,en;q=0.9",
