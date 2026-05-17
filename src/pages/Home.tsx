@@ -133,24 +133,31 @@ export default function Home() {
       return Math.min(2000 * Math.pow(2, minTries), 300_000);
     };
 
-    scanInWorker({
-      items,
-      retryCounts: Array.from(retryCountsRef.current.entries()),
-      scheduledUids: Array.from(retryTimersRef.current.keys()),
-      now: Date.now(),
-      scanLimit: 300,
-      max: MAX,
-      notFoundMax: NOT_FOUND_MAX,
-      cooldownMs: COOLDOWN_MS,
-    }).then((buckets) => {
+    // Debounce so we don't kick off a worker scan on every single item
+    // mutation during a busy import — the items array can churn dozens of
+    // times per second.
+    const debounce = window.setTimeout(() => {
       if (cancelled) return;
-      if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
-      if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
-      if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
-    }).catch(() => { /* ignore */ });
+      scanInWorker({
+        items,
+        retryCounts: Array.from(retryCountsRef.current.entries()),
+        scheduledUids: Array.from(retryTimersRef.current.keys()),
+        now: Date.now(),
+        scanLimit: 300,
+        max: MAX,
+        notFoundMax: NOT_FOUND_MAX,
+        cooldownMs: COOLDOWN_MS,
+      }).then((buckets) => {
+        if (cancelled) return;
+        if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
+        if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
+        if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
+      }).catch(() => { /* ignore */ });
+    }, 800);
 
     return () => {
       cancelled = true;
+      clearTimeout(debounce);
     };
   }, [items, autoRetry, fetchProfiles]);
   useEffect(() => {
