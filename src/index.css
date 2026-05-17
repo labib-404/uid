@@ -4,141 +4,151 @@
 
 @layer base {
   :root {
-    /* Normal dark · black bg · blue primary · red destructive · green success */
-    --background: 0 0% 6%;
-    --foreground: 0 0% 96%;
+    /* 💧 Water — deep ocean dark, aqua primary, smooth fluid surfaces */
+    --background: 205 60% 6%;
+    --foreground: 190 30% 96%;
 
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 96%;
+    --card: 205 50% 10%;
+    --card-foreground: 190 30% 96%;
 
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 205 55% 9%;
+    --popover-foreground: 190 30% 96%;
 
-    --primary: 217 91% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 65%;
+    --primary: 192 90% 55%;
+    --primary-foreground: 205 60% 6%;
+    --primary-glow: 180 95% 65%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 200 40% 16%;
+    --secondary-foreground: 190 30% 96%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 205 35% 15%;
+    --muted-foreground: 195 25% 65%;
 
-    --accent: 142 70% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 175 85% 50%;
+    --accent-foreground: 205 60% 6%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 350 80% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
-    --warning: 38 92% 55%;
+    --success: 165 75% 45%;
+    --warning: 38 92% 60%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 217 91% 55%;
+    --border: 200 40% 20%;
+    --input: 200 40% 18%;
+    --ring: 192 90% 55%;
 
-    --radius: 0.375rem;
+    --radius: 1.25rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 55%), hsl(217 91% 65%));
-    --gradient-mesh: none;
-    --gradient-glow: none;
-    --shadow-glow: 0 0 0 1px hsl(217 91% 55% / 0.4);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --shadow-brutal: 0 4px 12px hsl(0 0% 0% / 0.4);
+    --gradient-primary: linear-gradient(135deg, hsl(192 90% 55%), hsl(175 85% 50%) 50%, hsl(220 85% 60%));
+    --gradient-mesh:
+      radial-gradient(60% 45% at 15% 10%, hsl(192 90% 55% / 0.28), transparent 70%),
+      radial-gradient(55% 40% at 88% 90%, hsl(175 85% 50% / 0.22), transparent 70%),
+      radial-gradient(50% 40% at 50% 50%, hsl(220 85% 50% / 0.16), transparent 70%);
+    --gradient-glow: radial-gradient(circle, hsl(192 90% 55% / 0.45), transparent 70%);
+    --shadow-glow: 0 0 40px hsl(192 90% 55% / 0.35), 0 0 0 1px hsl(192 90% 55% / 0.25);
+    --shadow-card: 0 8px 32px hsl(205 80% 4% / 0.5), inset 0 1px 0 hsl(190 100% 90% / 0.06);
+    --shadow-brutal: 0 20px 60px -10px hsl(192 90% 30% / 0.45);
 
-    --sidebar-background: 0 0% 9%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 217 91% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 217 91% 55%;
+    --sidebar-background: 205 55% 8%;
+    --sidebar-foreground: 190 30% 96%;
+    --sidebar-primary: 192 90% 55%;
+    --sidebar-primary-foreground: 205 60% 6%;
+    --sidebar-accent: 200 40% 14%;
+    --sidebar-accent-foreground: 190 30% 96%;
+    --sidebar-border: 200 40% 18%;
+    --sidebar-ring: 192 90% 55%;
   }
   .light {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 8%;
+    --background: 195 60% 97%;
+    --foreground: 205 60% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 205 60% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
-    --primary: 217 91% 50%;
+    --popover-foreground: 205 60% 10%;
+    --primary: 192 90% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 8%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 40%;
-    --accent: 142 70% 38%;
+    --secondary: 195 50% 94%;
+    --secondary-foreground: 205 60% 10%;
+    --muted: 195 40% 94%;
+    --muted-foreground: 205 25% 40%;
+    --accent: 175 85% 40%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 75% 50%;
+    --destructive: 350 80% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 217 91% 50%;
+    --border: 195 40% 86%;
+    --input: 195 40% 86%;
+    --ring: 192 90% 45%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  html, body { @apply bg-background text-foreground; }
-  /* Ambient glass backdrop — fixed so it never reflows during scroll.
-     Uses two large radial gradients painted directly onto the body so we
-     don't need extra DOM nodes or expensive blurs. */
+  html, body { @apply bg-background text-foreground; scroll-behavior: smooth; }
+  /* 💧 Liquid backdrop — fluid radial currents drifting across the surface */
   body {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(60% 45% at 12% 8%, hsl(217 91% 55% / 0.18), transparent 70%),
-      radial-gradient(55% 40% at 92% 88%, hsl(247 80% 60% / 0.14), transparent 70%);
+      radial-gradient(60% 45% at 12% 8%,  hsl(192 90% 55% / 0.28), transparent 70%),
+      radial-gradient(55% 40% at 92% 88%, hsl(175 85% 50% / 0.22), transparent 70%),
+      radial-gradient(45% 35% at 50% 55%, hsl(220 85% 55% / 0.18), transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
-  h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
-  .font-display { font-family: system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
-  .font-display-bold { font-family: system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+  h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.02em; }
+  .font-display { font-family: system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+  .font-display-bold { font-family: system-ui, sans-serif; font-weight: 700; letter-spacing: -0.03em; }
   .font-mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
 }
 
 @layer utilities {
-  .text-gradient { color: hsl(var(--primary)); }
-  .bg-gradient-primary { background: hsl(var(--primary)); }
-  .bg-gradient-mesh { background: transparent; }
-  .bg-gradient-glow { background: transparent; }
-  /* Heavy glass — reserved for app chrome (header, bottom nav, sticky bars). */
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-primary { background: var(--gradient-primary); }
+  .bg-gradient-mesh { background: var(--gradient-mesh); }
+  .bg-gradient-glow { background: var(--gradient-glow); }
+  /* 💧 Liquid glass — frosted aqua surface for chrome */
   .glass {
-    background: hsl(0 0% 4% / 0.55);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-    border: 1px solid hsl(0 0% 100% / 0.08);
+    background: linear-gradient(135deg, hsl(192 90% 55% / 0.10), hsl(205 60% 8% / 0.55));
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid hsl(190 100% 90% / 0.10);
   }
-  /* Light glass panel — translucent surface for cards / lists.
-     NO backdrop-filter so it stays cheap on long virtualized lists. */
+  /* Soft water card */
   .brutal {
-    border: 1px solid hsl(0 0% 100% / 0.08);
-    background: hsl(0 0% 100% / 0.03);
-    border-radius: 0.75rem;
-    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
+    border: 1px solid hsl(190 100% 90% / 0.08);
+    background: linear-gradient(135deg, hsl(190 100% 90% / 0.04), hsl(205 60% 8% / 0.20));
+    border-radius: 1.25rem;
+    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.06), 0 4px 24px hsl(205 80% 4% / 0.35);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s ease;
   }
+  .brutal:hover { border-color: hsl(192 90% 55% / 0.35); box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.08), 0 12px 40px hsl(192 90% 30% / 0.35); }
   .brutal-lg {
-    border: 1px solid hsl(0 0% 100% / 0.1);
-    background: hsl(0 0% 100% / 0.04);
-    border-radius: 1rem;
-    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+    border: 1px solid hsl(190 100% 90% / 0.10);
+    background: linear-gradient(135deg, hsl(190 100% 90% / 0.05), hsl(205 60% 8% / 0.25));
+    border-radius: 1.75rem;
+    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.07), 0 8px 40px hsl(205 80% 4% / 0.45);
   }
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-card { box-shadow: var(--shadow-card); }
-  .tap { @apply active:scale-[0.97] transition-transform; }
+  .tap { @apply active:scale-[0.97]; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: linear-gradient(180deg, hsl(192 90% 55% / 0.5), hsl(175 85% 50% / 0.5)); border-radius: 3px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
   .grain { background: transparent; }
-  .marquee-mask { mask-image: none; }
-  .glow-ring { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4); }
+  .marquee-mask { mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+  .glow-ring { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px hsl(var(--primary) / 0.35); }
+  /* 💧 Smooth water transitions — apply everywhere */
+  .smooth { transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
 }
 
 @keyframes shake {
@@ -154,8 +164,37 @@
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
 }
+@keyframes ripple {
+  0%   { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes wave {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50%      { transform: translateY(-8px) translateX(4px); }
+}
+@keyframes flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 @layer utilities {
   .animate-shake { animation: shake 0.4s ease-in-out; }
   .animate-blink { animation: blink 1.1s steps(1) infinite; }
   .loading-bar-track { animation: loading-bar-slide 1.1s ease-in-out infinite; will-change: transform; }
+  .animate-ripple { animation: ripple 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .animate-wave   { animation: wave 6s ease-in-out infinite; }
+  .animate-flow   {
+    background: linear-gradient(135deg, hsl(192 90% 55%), hsl(175 85% 50%), hsl(220 85% 60%), hsl(192 90% 55%));
+    background-size: 300% 300%;
+    animation: flow 10s ease infinite;
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, hsl(190 100% 90% / 0.12), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s linear infinite;
+  }
 }
