@@ -104,9 +104,9 @@ self.onmessage = (e: MessageEvent<Req>) => {
     if (req.kind === "compact") result = compact(req.items);
     else if (req.kind === "scan") result = scan(req);
     else if (req.kind === "chunk") result = chunk(req.items, req.size);
-    (self as any).postMessage({ id: req.id, ok: true, result });
-  } catch (err: any) {
-    (self as any).postMessage({ id: req.id, ok: false, error: String(err?.message ?? err) });
+    self.postMessage({ id: req.id, ok: true, result });
+  } catch (err: unknown) {
+    self.postMessage({ id: req.id, ok: false, error: err instanceof Error ? err.message : String(err) });
   }
 };
 
