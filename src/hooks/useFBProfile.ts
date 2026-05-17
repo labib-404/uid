@@ -242,6 +242,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         setLoading(false);
         releaseSlot();
         return;
+      }
       list.forEach((u) => FETCH_LOCKS.delete(u));
       bumpEnd(list.length, okCount, failCount);
       setLoading(false);
