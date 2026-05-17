@@ -285,9 +285,9 @@ async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
     if (!ct.startsWith("image/")) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
     if (buf.length < 200 || buf.length > 600_000) return null;
-    // Reject Facebook's default silhouette avatar (returned as a small GIF
-    // when the real photo isn't accessible). Heuristic: small GIF payload.
-    if (ct.includes("gif") || buf.length < 3500) return null;
+    // Reject Facebook's default-silhouette placeholder only. It is always
+    // served as a small GIF (~1.5KB). Real avatars are JPEG/PNG/WebP.
+    if (ct.includes("gif")) return null;
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     return `data:${ct};base64,${btoa(bin)}`;
