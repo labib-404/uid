@@ -406,27 +406,44 @@ export default function Home() {
         <div
           className="sticky z-20 -mx-4 px-4 pt-2 pb-2 bg-background/85 backdrop-blur-md border-b border-white/5"
           style={{ top: "var(--header-h, 56px)" }}
+          role="region"
+          aria-label="Import progress"
         >
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
-              <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+              <RefreshCw className="w-3 h-3 animate-spin text-primary" aria-hidden="true" />
               <span className="text-[11px] text-muted-foreground">
                 Import · {importProgress.done}/{importProgress.tracked}
               </span>
-              <div className="ml-auto flex items-center gap-2 text-[11px]">
+              <div className="ml-auto flex items-center gap-2 text-[11px]" aria-hidden="true">
                 <span className="text-primary">{importProgress.done} done</span>
                 <span className="text-amber-400">{importProgress.retrying} retrying</span>
                 <span className="text-destructive">{importProgress.failed} failed</span>
               </div>
             </div>
             {nextRetryInfo.queued > 0 && (
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <div
+                className="flex items-center gap-2 text-[10px] text-muted-foreground"
+                aria-hidden="true"
+              >
                 <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(nextRetryInfo.secs)}</span></span>
                 <span className="opacity-60">·</span>
                 <span>{nextRetryInfo.queued} queued</span>
               </div>
             )}
-            <div className="w-full h-1.5 bg-muted rounded overflow-hidden">
+            <div
+              className="w-full h-1.5 bg-muted rounded overflow-hidden"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={importProgress.tracked || 100}
+              aria-valuenow={importProgress.done}
+              aria-valuetext={
+                importProgress.tracked
+                  ? `${importProgress.done} of ${importProgress.tracked} imported`
+                  : "Import starting"
+              }
+              aria-label="Import progress"
+            >
               <div
                 className="h-full bg-primary transition-all"
                 style={{
@@ -438,6 +455,22 @@ export default function Home() {
                 }}
               />
             </div>
+            {/* Polite, screen-reader-only live status. Throttled phrasing
+                avoids spamming AT as counts tick up rapidly. */}
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+              {importProgress.tracked === 0
+                ? "Import starting"
+                : importProgress.done >= importProgress.tracked &&
+                  importProgress.retrying === 0
+                ? `Import complete. ${importProgress.done} of ${importProgress.tracked} imported${
+                    importProgress.failed > 0 ? `, ${importProgress.failed} failed` : ""
+                  }.`
+                : `Importing: ${importProgress.done} of ${importProgress.tracked} done, ${importProgress.retrying} retrying, ${importProgress.failed} failed${
+                    nextRetryInfo.queued > 0
+                      ? `. Next retry in ${fmtSecs(nextRetryInfo.secs)}.`
+                      : "."
+                  }`}
+            </p>
           </div>
         </div>
       )}
