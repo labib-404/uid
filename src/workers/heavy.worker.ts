@@ -26,11 +26,8 @@ type ChunkReq = { id: number; kind: "chunk"; items: any[]; size: number };
 type Req = CompactReq | ScanReq | ChunkReq;
 
 function compact(items: AnyItem[]) {
-  return items.map((it) =>
-    typeof it?.photo_url === "string" && it.photo_url.startsWith("data:image/")
-      ? { ...it, photo_url: /^\d+$/.test(String(it.uid ?? "")) ? `https://graph.facebook.com/${it.uid}/picture?type=large&width=200&height=200` : it.photo_url }
-      : it
-  );
+  // Preserve base64 photo_url so reloads keep the actual fetched avatar.
+  return items;
 }
 
 function isComplete(i: AnyItem) {
