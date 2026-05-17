@@ -28,6 +28,16 @@ let memCache: FBId[] | null = null;
 const listeners = new Set<(items: FBId[]) => void>();
 let persistTimer: number | null = null;
 let idlePersist: number | null = null;
+let notifyTimer: number | null = null;
+
+function notifyListeners() {
+  if (notifyTimer !== null) return;
+  notifyTimer = window.setTimeout(() => {
+    notifyTimer = null;
+    const snapshot = memCache ?? [];
+    listeners.forEach((l) => l(snapshot));
+  }, 120);
+}
 
 function compactForStorage(items: FBId[]) {
   return items.map((item) => {
@@ -68,7 +78,7 @@ function scheduleStorageWrite(items: FBId[]) {
 function persist(items: FBId[]) {
   memCache = items;
   scheduleStorageWrite(items);
-  listeners.forEach((l) => l(items));
+  notifyListeners();
 }
 
 export function useFBIds() {
