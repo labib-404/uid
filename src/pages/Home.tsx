@@ -29,6 +29,41 @@ import { FBId } from "@/types/fbid";
 type Filter = "all" | "checked" | "unchecked" | "saved" | "noted" | "tagged";
 type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 
+const fmtSecs = (s: number) =>
+  s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+
+// Isolated 1Hz ticker so the parent Home tree (including the virtualized
+// list) doesn't re-render every second while an import is in flight.
+function NextRetryCountdown({
+  etaRef,
+}: {
+  etaRef: React.MutableRefObject<Map<string, number>>;
+}) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  let soonest = Infinity;
+  let queued = 0;
+  for (const eta of etaRef.current.values()) {
+    queued++;
+    if (eta < soonest) soonest = eta;
+  }
+  if (!queued || !isFinite(soonest)) return null;
+  const secs = Math.max(0, Math.ceil((soonest - Date.now()) / 1000));
+  return (
+    <div
+      className="flex items-center gap-2 text-[10px] text-muted-foreground"
+      aria-hidden="true"
+    >
+      <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(secs)}</span></span>
+      <span className="opacity-60">·</span>
+      <span>{queued} queued</span>
+    </div>
+  );
+}
+
 export default function Home() {
   const { items, setItems, loading } = useFBIds();
   const { fetchProfiles, recheckInstagram, loading: fetching, igProgress } = useFBProfile(setItems);
@@ -133,24 +168,31 @@ export default function Home() {
       return Math.min(2000 * Math.pow(2, minTries), 300_000);
     };
 
-    scanInWorker({
-      items,
-      retryCounts: Array.from(retryCountsRef.current.entries()),
-      scheduledUids: Array.from(retryTimersRef.current.keys()),
-      now: Date.now(),
-      scanLimit: 300,
-      max: MAX,
-      notFoundMax: NOT_FOUND_MAX,
-      cooldownMs: COOLDOWN_MS,
-    }).then((buckets) => {
+    // Debounce so we don't kick off a worker scan on every single item
+    // mutation during a busy import — the items array can churn dozens of
+    // times per second.
+    const debounce = window.setTimeout(() => {
       if (cancelled) return;
-      if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
-      if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
-      if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
-    }).catch(() => { /* ignore */ });
+      scanInWorker({
+        items,
+        retryCounts: Array.from(retryCountsRef.current.entries()),
+        scheduledUids: Array.from(retryTimersRef.current.keys()),
+        now: Date.now(),
+        scanLimit: 300,
+        max: MAX,
+        notFoundMax: NOT_FOUND_MAX,
+        cooldownMs: COOLDOWN_MS,
+      }).then((buckets) => {
+        if (cancelled) return;
+        if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
+        if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
+        if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
+      }).catch(() => { /* ignore */ });
+    }, 800);
 
     return () => {
       cancelled = true;
+      clearTimeout(debounce);
     };
   }, [items, autoRetry, fetchProfiles]);
   useEffect(() => {
@@ -397,25 +439,10 @@ export default function Home() {
     igProgress.processing > 0 ||
     (items.length > 0 && !firstResolved);
 
-  // 1Hz tick that drives the next-retry countdown while the bar is visible.
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => {
-    if (!showImportBar) return;
-    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [showImportBar]);
-  const nextRetryInfo = useMemo(() => {
-    let soonest = Infinity;
-    let queued = 0;
-    for (const eta of retryEtaRef.current.values()) {
-      queued++;
-      if (eta < soonest) soonest = eta;
-    }
-    if (!queued || !isFinite(soonest)) return { queued: 0, secs: 0 };
-    return { queued, secs: Math.max(0, Math.ceil((soonest - nowTick) / 1000)) };
-  }, [nowTick, importProgress.retrying]);
-  const fmtSecs = (s: number) =>
-    s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+  // Queued-count snapshot updates only when the retry pipeline mutates,
+  // not every second — the countdown itself ticks inside a child component
+  // so the whole Home tree doesn't re-render at 1Hz.
+  const queuedRetryCount = importProgress.retrying;
 
   const importBarRef = useRef<HTMLDivElement | null>(null);
   const [importBarHeight, setImportBarHeight] = useState(0);
@@ -451,7 +478,7 @@ export default function Home() {
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
-  }, [showImportBar, nextRetryInfo.queued]);
+  }, [showImportBar, queuedRetryCount]);
 
   return (
     <div className="space-y-3">
@@ -516,16 +543,7 @@ export default function Home() {
                 </Tooltip>
               </div>
             </div>
-            {nextRetryInfo.queued > 0 && (
-              <div
-                className="flex items-center gap-2 text-[10px] text-muted-foreground"
-                aria-hidden="true"
-              >
-                <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(nextRetryInfo.secs)}</span></span>
-                <span className="opacity-60">·</span>
-                <span>{nextRetryInfo.queued} queued</span>
-              </div>
-            )}
+            <NextRetryCountdown etaRef={retryEtaRef} />
             <div
               className="w-full h-1.5 bg-muted rounded overflow-hidden"
               role="progressbar"
@@ -560,11 +578,7 @@ export default function Home() {
                 ? `Import complete. ${importProgress.done} of ${importProgress.tracked} imported${
                     importProgress.failed > 0 ? `, ${importProgress.failed} failed` : ""
                   }.`
-                : `Importing: ${importProgress.done} of ${importProgress.tracked} done, ${importProgress.retrying} retrying, ${importProgress.failed} failed${
-                    nextRetryInfo.queued > 0
-                      ? `. Next retry in ${fmtSecs(nextRetryInfo.secs)}.`
-                      : "."
-                  }`}
+                : `Importing: ${importProgress.done} of ${importProgress.tracked} done, ${importProgress.retrying} retrying, ${importProgress.failed} failed.`}
             </p>
           </div>
           </div>
