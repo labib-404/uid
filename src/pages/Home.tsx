@@ -438,12 +438,6 @@ export default function Home() {
   return (
     <div className="space-y-3">
       <TopLoadingBar show={showTopLoader} label="Loading profiles" />
-      <div className="border-b border-border pb-3">
-        <h1 className="text-2xl font-semibold">Home</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          {items.length} item{items.length === 1 ? "" : "s"} · track, tag and verify accounts
-        </p>
-      </div>
       {showImportBar && (
         <div
           ref={importBarRef}
@@ -526,6 +520,12 @@ export default function Home() {
           style={{ height: importBarHeight }}
         />
       )}
+      <div className="border-b border-border pb-3">
+        <h1 className="text-2xl font-semibold">Home</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          {items.length} item{items.length === 1 ? "" : "s"} · track, tag and verify accounts
+        </p>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="brutal p-3 text-left">
