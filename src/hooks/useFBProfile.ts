@@ -28,10 +28,11 @@ function classifyError(r?: ProfileResult | null): ErrKind | null {
 // Module-level lock to ensure same UID is not fetched concurrently across calls.
 const FETCH_LOCKS = new Set<string>();
 const EMPTY_PROGRESS = { done: 0, total: 0, processing: 0, success: 0, failed: 0 };
+const PROFILE_BATCH_SIZE = 15;
 
-// Global concurrency gate — caps simultaneous edge-function invocations so that
-// importing thousands of UIDs at once doesn't overwhelm the network or FB.
-const MAX_CONCURRENT_BATCHES = 4;
+// Global concurrency gate — keep one lookup request active so imports don't
+// overwhelm the browser, the backend function, or Facebook's rate limits.
+const MAX_CONCURRENT_BATCHES = 1;
 let activeBatches = 0;
 const waitQueue: Array<() => void> = [];
 async function acquireSlot() {
@@ -119,7 +120,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
       const lockedComplete = requested.filter((u) => !FETCH_LOCKS.has(u) && COMPLETE_LOCKS.has(u));
       const list = requested
         .filter((u) => !FETCH_LOCKS.has(u) && !COMPLETE_LOCKS.has(u))
-        .slice(0, 50);
+        .slice(0, PROFILE_BATCH_SIZE);
       if (!list.length) return;
       list.forEach((u) => FETCH_LOCKS.add(u));
       setLoading(true);

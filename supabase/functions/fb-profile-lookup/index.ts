@@ -387,8 +387,8 @@ Deno.serve(async (req) => {
     }
 
     const results: Record<string, any> = {};
-    // Limit concurrency to avoid Facebook rate-limiting on large batches.
-    const CONCURRENCY = 16;
+    // Limit concurrency aggressively to avoid partial fetches and rate-limits.
+    const CONCURRENCY = 3;
     const queue = [...uids];
     const workers: Promise<void>[] = [];
     const processOne = async (uid: string) => {

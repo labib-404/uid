@@ -46,7 +46,12 @@ export function compactInWorker<T extends Record<string, any>>(items: T[]): Prom
   return Promise.resolve(
     items.map((it) =>
       typeof (it as any)?.photo_url === "string" && (it as any).photo_url.startsWith("data:image/")
-        ? { ...(it as any), photo_url: null }
+        ? {
+            ...(it as any),
+            photo_url: /^\d+$/.test(String((it as any).uid ?? ""))
+              ? `https://graph.facebook.com/${(it as any).uid}/picture?type=large&width=200&height=200`
+              : (it as any).photo_url,
+          }
         : it
     ) as T[]
   );
