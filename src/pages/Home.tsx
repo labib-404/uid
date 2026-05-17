@@ -404,7 +404,7 @@ export default function Home() {
       </div>
       {showImportBar && (
         <div
-          className="sticky z-20 -mx-4 px-4 pt-2 pb-2 bg-background/85 backdrop-blur-md border-b border-white/5"
+          className="sticky z-20 -mx-4 px-4 pt-2 pb-2 bg-background/85 backdrop-blur-md border-b border-white/5 transition-[top] duration-300 ease-out motion-reduce:transition-none"
           style={{ top: "var(--header-h, 56px)" }}
           role="region"
           aria-label="Import progress"
