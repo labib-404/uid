@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -134,7 +134,7 @@ export default function Home() {
     if (!autoRetry) return;
     const MAX = 15;
     const NOT_FOUND_MAX = 3;
-    const COOLDOWN_MS = 30_000;
+    const COOLDOWN_MS = 60_000;
     let cancelled = false;
 
     const scheduleBatch = (
@@ -178,7 +178,7 @@ export default function Home() {
         retryCounts: Array.from(retryCountsRef.current.entries()),
         scheduledUids: Array.from(retryTimersRef.current.keys()),
         now: Date.now(),
-        scanLimit: 300,
+        scanLimit: 120,
         max: MAX,
         notFoundMax: NOT_FOUND_MAX,
         cooldownMs: COOLDOWN_MS,
@@ -188,7 +188,7 @@ export default function Home() {
         if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
         if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
       }).catch(() => { /* ignore */ });
-    }, 800);
+    }, 2500);
 
     return () => {
       cancelled = true;
@@ -196,14 +196,16 @@ export default function Home() {
     };
   }, [items, autoRetry, fetchProfiles]);
   useEffect(() => {
+    const timers = retryTimersRef.current;
     return () => {
-      retryTimersRef.current.forEach((t) => clearTimeout(t));
-      retryTimersRef.current.clear();
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
     };
   }, []);
 
+  const deferredItems = useDeferredValue(items);
   const filtered = useMemo(() => {
-    let out = items;
+    let out = deferredItems;
     if (search.trim()) {
       const q = search.toLowerCase();
       out = out.filter((i) => i.uid.toLowerCase().includes(q) || (i.note ?? "").toLowerCase().includes(q));
@@ -215,6 +217,7 @@ export default function Home() {
       case "noted": out = out.filter((i) => i.note); break;
       case "tagged": out = out.filter((i) => i.tag); break;
     }
+    if (sort === "newest") return out;
     out = [...out].sort((a, b) => {
       switch (sort) {
         case "oldest": return a.created_at.localeCompare(b.created_at);
@@ -225,12 +228,13 @@ export default function Home() {
       }
     });
     return out;
-  }, [items, search, filter, sort]);
+  }, [deferredItems, search, filter, sort]);
 
   const toggleSel = useCallback((id: string) => {
     setSelected((prev) => {
       const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
       return s;
     });
   }, []);
@@ -337,18 +341,34 @@ export default function Home() {
     );
   };
 
-  const igCandidatesCount = useMemo(
-    () => items.filter((i) => i.username || i.instagram_username).length,
-    [items]
-  );
+  const listSummary = useMemo(() => {
+    const isComplete = (i: FBId) =>
+      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
+    let checked = 0, saved = 0, firstResolved = false, igCandidates = 0, failedIg = 0;
+    let done = 0, retrying = 0, failed = 0, tracked = 0;
+    for (const i of items) {
+      if (i.visited) checked++;
+      if (i.pinned) saved++;
+      if (!firstResolved && (i.real_name || i.username || i.photo_url)) firstResolved = true;
+      if (i.username || i.instagram_username) igCandidates++;
+      if (i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited") failedIg++;
+      const complete = isComplete(i);
+      const hasState = !!i.fetch_status || complete;
+      if (!hasState) continue;
+      tracked++;
+      if (complete || i.fetch_status === "done") done++;
+      else if (i.fetch_status === "pending" || i.fetch_status === "retrying") retrying++;
+      else if (
+        i.fetch_status === "failed" ||
+        i.fetch_status === "rate_limited" ||
+        i.fetch_status === "not_found"
+      ) failed++;
+    }
+    return { checked, saved, firstResolved, igCandidates, failedIg, importProgress: { tracked, done, retrying, failed, processed: done + failed } };
+  }, [items]);
 
-  const failedIgCount = useMemo(
-    () =>
-      items.filter(
-        (i) => i.instagram_verify_status === "failed" || i.instagram_verify_status === "rate_limited"
-      ).length,
-    [items]
-  );
+  const igCandidatesCount = listSummary.igCandidates;
+  const failedIgCount = listSummary.failedIg;
 
   const fetchOne = useCallback((uid: string) => fetchProfiles([uid]), [fetchProfiles]);
   const recheckOne = useCallback(
@@ -383,32 +403,15 @@ export default function Home() {
   };
 
   const stats = useMemo(() => [
-    { label: "Total",   val: items.length,                              color: "text-foreground" },
-    { label: "Checked", val: items.filter((i) => i.visited).length,     color: "text-primary" },
-    { label: "Left",    val: items.filter((i) => !i.visited).length,    color: "text-accent" },
-    { label: "Saved",   val: items.filter((i) => i.pinned).length,      color: "text-foreground italic" },
-  ], [items]);
+    { label: "Total",   val: items.length,                         color: "text-foreground" },
+    { label: "Checked", val: listSummary.checked,                  color: "text-primary" },
+    { label: "Left",    val: items.length - listSummary.checked,   color: "text-accent" },
+    { label: "Saved",   val: listSummary.saved,                    color: "text-foreground italic" },
+  ], [items.length, listSummary.checked, listSummary.saved]);
 
   // Import / fetch progress derived from item state — reflects the true
   // pipeline (done / retrying / failed) across all imported UIDs.
-  const importProgress = useMemo(() => {
-    const isComplete = (i: FBId) =>
-      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
-    let done = 0, retrying = 0, failed = 0, tracked = 0;
-    for (const i of items) {
-      const hasState = !!i.fetch_status || isComplete(i);
-      if (!hasState) continue;
-      tracked++;
-      if (isComplete(i) || i.fetch_status === "done") done++;
-      else if (i.fetch_status === "pending" || i.fetch_status === "retrying") retrying++;
-      else if (
-        i.fetch_status === "failed" ||
-        i.fetch_status === "rate_limited" ||
-        i.fetch_status === "not_found"
-      ) failed++;
-    }
-    return { tracked, done, retrying, failed, processed: done + failed };
-  }, [items]);
+  const importProgress = listSummary.importProgress;
   const isImportActive = importProgress.retrying > 0 || igProgress.total > 0;
   const [showFinishedImportBar, setShowFinishedImportBar] = useState(false);
   const hadActiveImportRef = useRef(false);
@@ -430,14 +433,10 @@ export default function Home() {
   // Global thin loader: visible while we're still fetching profile data,
   // OR while items exist but none have resolved any profile fields yet
   // (covers the gap between "just imported" and "first batch returns").
-  const firstResolved = useMemo(
-    () => items.some((i) => i.real_name || i.username || i.photo_url),
-    [items]
-  );
   const showTopLoader =
     importProgress.retrying > 0 ||
     igProgress.processing > 0 ||
-    (items.length > 0 && !firstResolved);
+    (items.length > 0 && !listSummary.firstResolved);
 
   // Queued-count snapshot updates only when the retry pipeline mutates,
   // not every second — the countdown itself ticks inside a child component

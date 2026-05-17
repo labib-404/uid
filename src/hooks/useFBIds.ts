@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { startTransition, useEffect, useState, useCallback } from "react";
 import { FBId } from "@/types/fbid";
 import { compactInWorker } from "@/workers/heavyClient";
 
@@ -27,6 +27,17 @@ function load(): FBId[] {
 let memCache: FBId[] | null = null;
 const listeners = new Set<(items: FBId[]) => void>();
 let persistTimer: number | null = null;
+let idlePersist: number | null = null;
+let notifyTimer: number | null = null;
+
+function notifyListeners() {
+  if (notifyTimer !== null) return;
+  notifyTimer = window.setTimeout(() => {
+    notifyTimer = null;
+    const snapshot = memCache ?? [];
+    listeners.forEach((l) => l(snapshot));
+  }, 120);
+}
 
 function compactForStorage(items: FBId[]) {
   return items.map((item) => {
@@ -38,24 +49,36 @@ function compactForStorage(items: FBId[]) {
 }
 
 function writeStorage(items: FBId[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* storage may be full or unavailable */ }
 }
 
 function scheduleStorageWrite(items: FBId[]) {
   if (persistTimer !== null) window.clearTimeout(persistTimer);
+  if (idlePersist !== null && "cancelIdleCallback" in window) {
+    window.cancelIdleCallback(idlePersist);
+    idlePersist = null;
+  }
   persistTimer = window.setTimeout(() => {
     persistTimer = null;
-    // Compact in a worker so big base64 stripping doesn't block the UI.
-    compactInWorker(items)
-      .then((compacted) => writeStorage(compacted))
-      .catch(() => writeStorage(compactForStorage(items)));
-  }, 350);
+    const persistNow = () => {
+      idlePersist = null;
+      // Compact in a worker so big base64 stripping doesn't block the UI.
+      compactInWorker(items)
+        .then((compacted) => writeStorage(compacted))
+        .catch(() => writeStorage(compactForStorage(items)));
+    };
+    if ("requestIdleCallback" in window) {
+      idlePersist = window.requestIdleCallback(persistNow, { timeout: 2500 });
+    } else {
+      persistNow();
+    }
+  }, 1200);
 }
 
 function persist(items: FBId[]) {
   memCache = items;
   scheduleStorageWrite(items);
-  listeners.forEach((l) => l(items));
+  notifyListeners();
 }
 
 export function useFBIds() {
@@ -63,7 +86,7 @@ export function useFBIds() {
   const [loading] = useState(false);
 
   useEffect(() => {
-    const l = (next: FBId[]) => setItemsState(next);
+    const l = (next: FBId[]) => startTransition(() => setItemsState(next));
     listeners.add(l);
     return () => { listeners.delete(l); };
   }, []);
