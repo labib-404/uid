@@ -404,7 +404,7 @@ export default function Home() {
       </div>
       {showImportBar && (
         <div
-          className="sticky z-20 -mx-1"
+          className="sticky z-20 -mx-4 px-4 pt-2 pb-2 bg-background/85 backdrop-blur-md border-b border-white/5"
           style={{ top: "var(--header-h, 56px)" }}
         >
           <div className="brutal px-3 py-2 space-y-1.5">
