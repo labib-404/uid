@@ -20,7 +20,7 @@ function load(): FBId[] {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     const items = (arr as FBId[]).map(restoreStablePhotoUrl);
-    if (raw.includes('"photo_url":"data:image/')) {
+    if (raw.includes("data:image/")) {
       // Offload the strip-base64 pass to the worker, then re-persist.
       compactInWorker(items).then((compacted) => {
         memCache = compacted;
