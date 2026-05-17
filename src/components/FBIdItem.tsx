@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { useSettings } from "@/hooks/useSettings";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function formatCount(n: number | string | null | undefined): string {
   if (n === null || n === undefined || n === "") return "";
@@ -32,7 +33,7 @@ interface Props {
   onRecheckInstagram?: () => void;
 }
 
-function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?: string | null; username?: string | null; photo?: string | null; size?: number }) {
+function Avatar({ uid, name, username, photo, size = 40, loading = false }: { uid: string; name?: string | null; username?: string | null; photo?: string | null; size?: number; loading?: boolean }) {
   const label = name?.trim() || (username ? `@${username}` : "") || uid || "Unknown user";
   const hasIdentity = Boolean(name?.trim() || username);
   if (photo) {
@@ -54,6 +55,15 @@ function Avatar({ uid, name, username, photo, size = 40 }: { uid: string; name?:
           }
           img.style.display = "none";
         }}
+      />
+    );
+  }
+  if (loading) {
+    return (
+      <Skeleton
+        className="rounded-full shrink-0 border border-white/10"
+        style={{ width: size, height: size }}
+        aria-label="Loading avatar"
       />
     );
   }
@@ -104,6 +114,13 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
   const setTag = (t: Tag | null) => update({ tag: t });
   const confirmDelete = () => { if (window.confirm(`Delete ${item.uid}?`)) onDelete(); };
   const compact = viewMode === "compact";
+  // Profile/photo data is still in-flight when there's no identity yet and a
+  // fetch is pending/retrying — or right after import before the first attempt
+  // resolves (status === "pending"). Show shimmer rows in place of the
+  // missing name/username so virtualized rows don't look empty.
+  const isFetching =
+    item.fetch_status === "pending" || item.fetch_status === "retrying";
+  const showSkeleton = isFetching && !item.real_name && !item.username;
 
   return (
     <div className="relative overflow-hidden touch-pan-y group">
@@ -134,9 +151,22 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
         <div className="flex items-start gap-3">
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-2" />
 
-          <Avatar uid={item.uid} name={item.real_name} username={item.username} photo={item.photo_url} size={compact ? 64 : 80} />
+          <Avatar
+            uid={item.uid}
+            name={item.real_name}
+            username={item.username}
+            photo={item.photo_url}
+            size={compact ? 64 : 80}
+            loading={showSkeleton}
+          />
 
           <div className="flex-1 min-w-0 space-y-1.5">
+            {showSkeleton && (
+              <div className="space-y-1.5" aria-busy="true" aria-label="Loading profile">
+                <Skeleton className="h-3.5 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            )}
             {item.real_name && (
               <div className="flex items-center gap-1.5">
                 <div className="text-[13px] font-semibold truncate">{item.real_name}</div>
