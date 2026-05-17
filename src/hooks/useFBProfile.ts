@@ -60,6 +60,7 @@ function persistCompletes() {
 }
 export function unlockUid(uid: string) {
   COMPLETE_LOCKS.delete(uid);
+  FETCH_LOCKS.delete(uid);
   persistCompletes();
 }
 export function lockUidsComplete(uids: string[]) {
