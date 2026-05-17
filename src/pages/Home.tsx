@@ -43,6 +43,32 @@ export default function Home() {
       .map((i) => i.uid);
     if (completeUids.length) lockUidsComplete(completeUids);
   }, [items]);
+
+  // On mount after refresh, clear stale "pending"/"retrying" fetch_status
+  // left over from a previous session — those in-memory retry timers are
+  // gone, so the import progress bar would otherwise show a stuck loading
+  // state forever. Demote them to "failed" so the bar reflects truth and
+  // auto-retry (if enabled) can pick them up cleanly.
+  const resetStaleRef = useRef(false);
+  useEffect(() => {
+    if (resetStaleRef.current || !items.length) return;
+    resetStaleRef.current = true;
+    const hasStale = items.some(
+      (i) => i.fetch_status === "pending" || i.fetch_status === "retrying",
+    );
+    if (!hasStale) return;
+    setItems((prev) =>
+      prev.map((p) =>
+        p.fetch_status === "pending" || p.fetch_status === "retrying"
+          ? {
+              ...p,
+              fetch_status: "failed",
+              fetch_error: p.fetch_error ?? "interrupted",
+            }
+          : p,
+      ),
+    );
+  }, [items, setItems]);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   useEffect(() => {
