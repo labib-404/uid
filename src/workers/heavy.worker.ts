@@ -33,8 +33,19 @@ type ScanBuckets = {
 type WorkerResult = WorkerItem[] | ScanBuckets | unknown[][];
 
 function compact(items: WorkerItem[]) {
-  // Preserve base64 photo_url so reloads keep the actual fetched avatar.
-  return items;
+  // Never persist large data:image blobs. A few thousand base64 avatars make
+  // localStorage JSON parse/stringify block the UI for seconds on mobile.
+  return items.map((item) => {
+    const photo = item.photo_url;
+    if (typeof photo !== "string" || !photo.startsWith("data:image/")) return item;
+    const uid = typeof item.uid === "string" ? item.uid : "";
+    return {
+      ...item,
+      photo_url: /^\d+$/.test(uid)
+        ? `https://graph.facebook.com/${uid}/picture?type=large&width=200&height=200`
+        : null,
+    };
+  });
 }
 
 function asString(value: unknown): string | null {
