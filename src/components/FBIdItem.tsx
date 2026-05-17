@@ -418,10 +418,5 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
 
 export default memo(FBIdItemBase, (a, b) =>
   a.item === b.item &&
-  a.selected === b.selected &&
-  a.onToggleSelect === b.onToggleSelect &&
-  a.onChange === b.onChange &&
-  a.onDelete === b.onDelete &&
-  a.onOpenNote === b.onOpenNote &&
-  a.onFetchProfile === b.onFetchProfile
+  a.selected === b.selected
 );
