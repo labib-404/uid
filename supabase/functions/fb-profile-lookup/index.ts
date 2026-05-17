@@ -217,8 +217,19 @@ function parseProfile(html: string, uid: string) {
   ]) {
     const m = html.match(p);
     if (m) {
-      nationality = m[1].trim();
-      break;
+      const v = m[1].trim();
+      // Reject garbage matches (HTML/JSON noise, entities, control chars, overly long)
+      if (
+        v.length >= 2 &&
+        v.length <= 60 &&
+        !/[<>{}\\]/.test(v) &&
+        !/&[a-z#0-9]+;/i.test(v) &&
+        !/[":;]/.test(v) &&
+        /^[\p{L}][\p{L}\p{M}\s,.'\-]+$/u.test(v)
+      ) {
+        nationality = v;
+        break;
+      }
     }
   }
 
