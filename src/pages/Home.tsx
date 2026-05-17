@@ -443,7 +443,7 @@ export default function Home() {
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
-  }, [showImportBar, nextRetryInfo.queued]);
+  }, [showImportBar, queuedRetryCount]);
 
   return (
     <div className="space-y-3">
