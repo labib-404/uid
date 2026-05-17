@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -449,14 +450,53 @@ export default function Home() {
           <div className="max-w-3xl mx-auto px-4 pt-2 pb-3">
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
-              <RefreshCw className="w-3 h-3 animate-spin text-primary" aria-hidden="true" />
+              {(() => {
+                const phase =
+                  importProgress.tracked === 0
+                    ? { key: "pending", label: "Pending", tone: "text-muted-foreground bg-muted", desc: "Waiting to start fetching profiles." }
+                    : importProgress.done >= importProgress.tracked && importProgress.retrying === 0
+                    ? { key: "completed", label: "Completed", tone: "text-primary bg-primary/15", desc: `All ${importProgress.tracked} profiles processed${importProgress.failed > 0 ? `, ${importProgress.failed} failed` : ""}.` }
+                    : { key: "processing", label: "Processing", tone: "text-amber-400 bg-amber-400/15", desc: `${importProgress.done} of ${importProgress.tracked} done · ${importProgress.retrying} in queue` };
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${phase.tone}`}
+                        aria-label={`Current step: ${phase.label}. ${phase.desc}`}
+                      >
+                        <RefreshCw className={`w-3 h-3 ${phase.key === "processing" ? "animate-spin" : ""}`} aria-hidden="true" />
+                        {phase.label}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {phase.desc}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
               <span className="text-[11px] text-muted-foreground">
-                Import · {importProgress.done}/{importProgress.tracked}
+                {importProgress.done}/{importProgress.tracked}
               </span>
               <div className="ml-auto flex items-center gap-2 text-[11px]" aria-hidden="true">
-                <span className="text-primary">{importProgress.done} done</span>
-                <span className="text-amber-400">{importProgress.retrying} retrying</span>
-                <span className="text-destructive">{importProgress.failed} failed</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-primary cursor-help">{importProgress.done} done</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Profiles fetched successfully</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-amber-400 cursor-help">{importProgress.retrying} retrying</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Pending or being retried</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-destructive cursor-help">{importProgress.failed} failed</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Failed / rate-limited / not found</TooltipContent>
+                </Tooltip>
               </div>
             </div>
             {nextRetryInfo.queued > 0 && (
