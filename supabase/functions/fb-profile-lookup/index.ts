@@ -383,14 +383,18 @@ Deno.serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-    );
-    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
-    const claims = claimsData?.claims as { sub?: string; role?: string } | undefined;
-    const isServiceRole = claims?.role === "service_role";
-    if (claimsErr || (!claims?.sub && !isServiceRole)) {
+    // Allow service-role calls (e.g. from fb-profile-refresh)
+    const isServiceRole = token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    let authorized = isServiceRole;
+    if (!authorized) {
+      const authClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+      );
+      const { data, error: userErr } = await authClient.auth.getUser(token);
+      authorized = !userErr && !!data?.user;
+    }
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
