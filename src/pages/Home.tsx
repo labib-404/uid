@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
 import { useFBProfile, unlockUid, lockUidsComplete } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
 import { scanInWorker } from "@/workers/heavyClient";
-import FBIdItem from "@/components/FBIdItem";
 import NoteDialog from "@/components/NoteDialog";
+import VirtualFBList from "@/components/VirtualFBList";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,10 +52,7 @@ export default function Home() {
   const [sort, setSort] = useState<Sort>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [noteFor, setNoteFor] = useState<FBId | null>(null);
-  const [visibleCount, setVisibleCount] = useState(50);
   const [confirmRecheck, setConfirmRecheck] = useState(false);
-
-  useEffect(() => setVisibleCount(50), [filter, search, sort]);
 
   // Auto-retry failed/rate-limited/never-fetched/incomplete UIDs.
   // Per-UID cap at 12 retries with exponential backoff.
@@ -153,24 +150,6 @@ export default function Home() {
     });
     return out;
   }, [items, search, filter, sort]);
-
-  const visible = filtered.slice(0, visibleCount);
-
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((c) => Math.min(c + 50, filtered.length));
-        }
-      },
-      { rootMargin: "400px" }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [filtered.length]);
 
   const toggleSel = useCallback((id: string) => {
     setSelected((prev) => {
@@ -544,31 +523,23 @@ export default function Home() {
 
       {loading ? (
         <div className="text-center py-10 text-muted-foreground">Loading…</div>
-      ) : visible.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <p className="mb-2">No items yet.</p>
           <a href="/import" className="text-primary underline underline-offset-4">Import some UIDs →</a>
         </div>
       ) : (
-        <div className={viewMode === "compact" ? "grid grid-cols-1 sm:grid-cols-2 gap-2" : "space-y-2"}>
-          {visible.map((item) => (
-            <Row
-              key={item.id}
-              item={item}
-              selected={selected.has(item.id)}
-              onToggleSelect={toggleSel}
-              onChange={updateLocal}
-              onDelete={deleteOne}
-              onOpenNote={openNote}
-              onFetchProfile={fetchOne}
-              onRecheckInstagram={recheckOne}
-            />
-          ))}
-          <div ref={sentinelRef} />
-          {visibleCount < filtered.length && (
-            <div className="text-center py-4 text-xs text-muted-foreground">Loading more…</div>
-          )}
-        </div>
+        <VirtualFBList
+          items={filtered}
+          compact={viewMode === "compact"}
+          selected={selected}
+          onToggleSelect={toggleSel}
+          onChange={updateLocal}
+          onDelete={deleteOne}
+          onOpenNote={openNote}
+          onFetchProfile={fetchOne}
+          onRecheckInstagram={recheckOne}
+        />
       )}
 
       <NoteDialog item={noteFor} onClose={() => setNoteFor(null)} onSaved={updateLocal} />
@@ -598,28 +569,3 @@ export default function Home() {
     </div>
   );
 }
-
-type RowProps = {
-  item: FBId;
-  selected: boolean;
-  onToggleSelect: (id: string) => void;
-  onChange: (next: FBId) => void;
-  onDelete: (item: FBId) => void;
-  onOpenNote: (item: FBId) => void;
-  onFetchProfile: (uid: string) => void;
-  onRecheckInstagram: (item: FBId) => void;
-};
-const Row = memo(function Row({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile, onRecheckInstagram }: RowProps) {
-  return (
-    <FBIdItem
-      item={item}
-      selected={selected}
-      onToggleSelect={() => onToggleSelect(item.id)}
-      onChange={onChange}
-      onDelete={() => onDelete(item)}
-      onOpenNote={() => onOpenNote(item)}
-      onFetchProfile={() => onFetchProfile(item.uid)}
-      onRecheckInstagram={() => onRecheckInstagram(item)}
-    />
-  );
-});
