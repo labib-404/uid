@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucide-react";
 import { useFBIds } from "@/hooks/useFBIds";
@@ -134,7 +134,7 @@ export default function Home() {
     if (!autoRetry) return;
     const MAX = 15;
     const NOT_FOUND_MAX = 3;
-    const COOLDOWN_MS = 30_000;
+    const COOLDOWN_MS = 60_000;
     let cancelled = false;
 
     const scheduleBatch = (
@@ -178,7 +178,7 @@ export default function Home() {
         retryCounts: Array.from(retryCountsRef.current.entries()),
         scheduledUids: Array.from(retryTimersRef.current.keys()),
         now: Date.now(),
-        scanLimit: 300,
+        scanLimit: 120,
         max: MAX,
         notFoundMax: NOT_FOUND_MAX,
         cooldownMs: COOLDOWN_MS,
@@ -188,7 +188,7 @@ export default function Home() {
         if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
         if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
       }).catch(() => { /* ignore */ });
-    }, 800);
+    }, 2500);
 
     return () => {
       cancelled = true;
@@ -202,8 +202,9 @@ export default function Home() {
     };
   }, []);
 
+  const deferredItems = useDeferredValue(items);
   const filtered = useMemo(() => {
-    let out = items;
+    let out = deferredItems;
     if (search.trim()) {
       const q = search.toLowerCase();
       out = out.filter((i) => i.uid.toLowerCase().includes(q) || (i.note ?? "").toLowerCase().includes(q));
@@ -225,7 +226,7 @@ export default function Home() {
       }
     });
     return out;
-  }, [items, search, filter, sort]);
+  }, [deferredItems, search, filter, sort]);
 
   const toggleSel = useCallback((id: string) => {
     setSelected((prev) => {
