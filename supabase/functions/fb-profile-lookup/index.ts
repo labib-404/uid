@@ -382,15 +382,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const token = authHeader.replace("Bearer ", "");
-    // Accept project keys (anon / service-role) — gates the function to this project only
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    let authorized = token === anonKey || token === serviceKey;
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const apiKey = req.headers.get("apikey")?.trim();
+    // Accept project keys from either Authorization or apikey headers. Lovable Cloud can expose
+    // the public key under either SUPABASE_ANON_KEY or SUPABASE_PUBLISHABLE_KEY depending on runtime.
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+    const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")?.trim();
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+    const projectKeys = new Set([anonKey, publishableKey, serviceKey].filter(Boolean));
+    let authorized = projectKeys.has(token) || (!!apiKey && projectKeys.has(apiKey));
     if (!authorized) {
       const authClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
-        anonKey!,
+        anonKey ?? publishableKey!,
       );
       const { data, error: userErr } = await authClient.auth.getUser(token);
       authorized = !userErr && !!data?.user;
