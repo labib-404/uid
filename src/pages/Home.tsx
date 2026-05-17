@@ -53,13 +53,19 @@ export default function Home() {
   useEffect(() => {
     if (resetStaleRef.current || !items.length) return;
     resetStaleRef.current = true;
+    const cutoff = Date.now() - 5 * 60 * 1000;
+    const isStaleFetch = (i: FBId) => {
+      if (i.fetch_status !== "pending" && i.fetch_status !== "retrying") return false;
+      if (!i.fetch_last_attempt_at) return true;
+      return new Date(i.fetch_last_attempt_at).getTime() < cutoff;
+    };
     const hasStale = items.some(
-      (i) => i.fetch_status === "pending" || i.fetch_status === "retrying",
+      (i) => isStaleFetch(i),
     );
     if (!hasStale) return;
     setItems((prev) =>
       prev.map((p) =>
-        p.fetch_status === "pending" || p.fetch_status === "retrying"
+        isStaleFetch(p)
           ? {
               ...p,
               fetch_status: "failed",
