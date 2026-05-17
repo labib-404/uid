@@ -69,9 +69,9 @@ export default function Import() {
     // the rest. This prevents pasting 2-3k UIDs from saturating the network.
     (async () => {
       const uids = newItems.map((i) => i.uid);
-      const BATCH = 50;
-      const PARALLEL = 2;
-      const PRIME = Math.min(uids.length, BATCH * PARALLEL * 2); // first ~200
+      const BATCH = 35;
+      const PARALLEL = 1;
+      const PRIME = Math.min(uids.length, BATCH * 2); // first ~70
       const primeUids = uids.slice(0, PRIME);
       const batches = await chunkInWorker(primeUids, BATCH);
       let cursor = 0;
