@@ -79,7 +79,7 @@ export default function AppLayout() {
 
   return (
     <div className={`min-h-screen ${fontClass} pb-24 bg-background text-foreground`}>
-      <header ref={headerRef} className="sticky top-0 z-30 glass border-b border-white/5">
+      <header ref={headerRef} className="sticky top-0 z-50 bg-background border-b border-border shadow-brutal">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button onClick={() => navigate("/")} className="flex items-baseline gap-1.5 text-left">
             <span className="text-lg font-semibold">UID</span>
@@ -99,7 +99,7 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-4">
+      <main className="max-w-3xl mx-auto px-4 py-4 pb-32">
         <Outlet />
       </main>
 
@@ -107,7 +107,7 @@ export default function AppLayout() {
         className="fixed left-1/2 -translate-x-1/2 bottom-3 z-40 w-[min(92%,28rem)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="glass rounded-[28px] shadow-2xl p-1.5 flex items-stretch justify-between">
+        <div className="bg-background border border-border rounded-[28px] shadow-2xl p-1.5 flex items-stretch justify-between">
           {tabs.map((t) => (
             <NavLink key={t.to} to={t.to} end className="flex-1">
               {({ isActive }) => (
