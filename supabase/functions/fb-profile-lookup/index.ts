@@ -16,6 +16,29 @@ const FB_HEADERS: Record<string, string> = {
   "cache-control": "no-cache",
 };
 
+function collectConfiguredKeys(): Set<string> {
+  const keys = new Set<string>();
+  const add = (value?: string | null) => {
+    const trimmed = value?.trim();
+    if (trimmed) keys.add(trimmed);
+  };
+  add(Deno.env.get("SUPABASE_ANON_KEY"));
+  add(Deno.env.get("SUPABASE_PUBLISHABLE_KEY"));
+  add(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  for (const name of ["SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_SECRET_KEYS"]) {
+    const raw = Deno.env.get(name);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      const values = Array.isArray(parsed) ? parsed : Object.values(parsed ?? {});
+      values.forEach((value) => typeof value === "string" && add(value));
+    } catch {
+      raw.split(/[\s,]+/).forEach(add);
+    }
+  }
+  return keys;
+}
+
 function formatFollowers(raw: string): string {
   const n = parseInt(raw.replace(/,/g, ""), 10);
   if (isNaN(n)) return raw;
