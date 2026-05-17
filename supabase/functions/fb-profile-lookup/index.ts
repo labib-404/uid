@@ -432,7 +432,7 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
     const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")?.trim();
     const projectKeys = collectConfiguredKeys();
-    let authorized = projectKeys.has(token) || (!!apiKey && projectKeys.has(apiKey));
+    let authorized = projectKeys.has(token) || (!!apiKey && projectKeys.has(apiKey)) || isProjectAnonKey(token) || (!!apiKey && isProjectAnonKey(apiKey));
     if (!authorized) {
       const authClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
