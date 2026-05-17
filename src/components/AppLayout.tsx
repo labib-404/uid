@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Upload, Star, Settings, LayoutGrid, Rows } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import InstallPWAButton from "@/components/InstallPWAButton";
 
 const tabs = [
@@ -15,6 +15,26 @@ export default function AppLayout() {
   const { fontSize, viewMode, setViewMode } = useSettings();
   const navigate = useNavigate();
   const fontClass = fontSize === "sm" ? "text-sm" : fontSize === "lg" ? "text-lg" : "text-base";
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  // Measure header height and expose as a CSS variable so sticky elements
+  // (e.g. import progress bar) can sit flush below it regardless of size.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const apply = () => {
+      const h = el.getBoundingClientRect().height;
+      document.documentElement.style.setProperty("--header-h", `${Math.round(h)}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    window.addEventListener("resize", apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
 
   // Alt+V toggles view mode.
   useEffect(() => {
@@ -34,7 +54,7 @@ export default function AppLayout() {
 
   return (
     <div className={`min-h-screen ${fontClass} pb-24 bg-background text-foreground`}>
-      <header className="sticky top-0 z-30 glass border-b border-white/5">
+      <header ref={headerRef} className="sticky top-0 z-30 glass border-b border-white/5">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button onClick={() => navigate("/")} className="flex items-baseline gap-1.5 text-left">
             <span className="text-lg font-semibold">UID</span>
