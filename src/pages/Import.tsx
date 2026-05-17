@@ -68,7 +68,7 @@ export default function Import() {
     // don't saturate the network or leave pending rows stuck indefinitely.
     (async () => {
       const uids = newItems.map((i) => i.uid);
-      const BATCH = 35;
+      const BATCH = 15;
       const PARALLEL = 1;
       const batches = await chunkInWorker(uids, BATCH);
       let cursor = 0;
