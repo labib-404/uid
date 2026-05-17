@@ -52,6 +52,11 @@ export default function Import() {
       tag: null,
       visited_at: null,
       created_at: now,
+      fetch_status: "pending",
+      fetch_attempts: 0,
+      fetch_error: null,
+      fetch_last_attempt_at: now,
+      instagram_checking: true,
     }));
 
     setItems([...newItems, ...items]);
