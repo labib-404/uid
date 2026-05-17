@@ -543,16 +543,7 @@ export default function Home() {
                 </Tooltip>
               </div>
             </div>
-            {nextRetryInfo.queued > 0 && (
-              <div
-                className="flex items-center gap-2 text-[10px] text-muted-foreground"
-                aria-hidden="true"
-              >
-                <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(nextRetryInfo.secs)}</span></span>
-                <span className="opacity-60">·</span>
-                <span>{nextRetryInfo.queued} queued</span>
-              </div>
-            )}
+            <NextRetryCountdown etaRef={retryEtaRef} />
             <div
               className="w-full h-1.5 bg-muted rounded overflow-hidden"
               role="progressbar"
@@ -587,11 +578,7 @@ export default function Home() {
                 ? `Import complete. ${importProgress.done} of ${importProgress.tracked} imported${
                     importProgress.failed > 0 ? `, ${importProgress.failed} failed` : ""
                   }.`
-                : `Importing: ${importProgress.done} of ${importProgress.tracked} done, ${importProgress.retrying} retrying, ${importProgress.failed} failed${
-                    nextRetryInfo.queued > 0
-                      ? `. Next retry in ${fmtSecs(nextRetryInfo.secs)}.`
-                      : "."
-                  }`}
+                : `Importing: ${importProgress.done} of ${importProgress.tracked} done, ${importProgress.retrying} retrying, ${importProgress.failed} failed.`}
             </p>
           </div>
           </div>
