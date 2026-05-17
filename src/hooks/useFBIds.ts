@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { startTransition, useEffect, useState, useCallback } from "react";
 import { FBId } from "@/types/fbid";
 import { compactInWorker } from "@/workers/heavyClient";
 
@@ -27,6 +27,7 @@ function load(): FBId[] {
 let memCache: FBId[] | null = null;
 const listeners = new Set<(items: FBId[]) => void>();
 let persistTimer: number | null = null;
+let idlePersist: number | null = null;
 
 function compactForStorage(items: FBId[]) {
   return items.map((item) => {
@@ -43,13 +44,25 @@ function writeStorage(items: FBId[]) {
 
 function scheduleStorageWrite(items: FBId[]) {
   if (persistTimer !== null) window.clearTimeout(persistTimer);
+  if (idlePersist !== null && "cancelIdleCallback" in window) {
+    window.cancelIdleCallback(idlePersist);
+    idlePersist = null;
+  }
   persistTimer = window.setTimeout(() => {
     persistTimer = null;
-    // Compact in a worker so big base64 stripping doesn't block the UI.
-    compactInWorker(items)
-      .then((compacted) => writeStorage(compacted))
-      .catch(() => writeStorage(compactForStorage(items)));
-  }, 350);
+    const persistNow = () => {
+      idlePersist = null;
+      // Compact in a worker so big base64 stripping doesn't block the UI.
+      compactInWorker(items)
+        .then((compacted) => writeStorage(compacted))
+        .catch(() => writeStorage(compactForStorage(items)));
+    };
+    if ("requestIdleCallback" in window) {
+      idlePersist = window.requestIdleCallback(persistNow, { timeout: 2500 });
+    } else {
+      persistNow();
+    }
+  }, 1200);
 }
 
 function persist(items: FBId[]) {
@@ -63,7 +76,7 @@ export function useFBIds() {
   const [loading] = useState(false);
 
   useEffect(() => {
-    const l = (next: FBId[]) => setItemsState(next);
+    const l = (next: FBId[]) => startTransition(() => setItemsState(next));
     listeners.add(l);
     return () => { listeners.delete(l); };
   }, []);
