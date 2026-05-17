@@ -4,6 +4,7 @@ import { Search, Trash2, Check, Star, Copy, Download, X, RefreshCw } from "lucid
 import { useFBIds } from "@/hooks/useFBIds";
 import { useFBProfile, unlockUid, lockUidsComplete } from "@/hooks/useFBProfile";
 import { useSettings } from "@/hooks/useSettings";
+import { scanInWorker } from "@/workers/heavyClient";
 import FBIdItem from "@/components/FBIdItem";
 import NoteDialog from "@/components/NoteDialog";
 import { Input } from "@/components/ui/input";
@@ -65,60 +66,22 @@ export default function Home() {
   const retryEtaRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     if (!autoRetry) return;
-    const scanLimit = 300;
     const MAX = 15;
-    const NOT_FOUND_MAX = 3; // give up quickly on profiles that look truly missing
-    const COOLDOWN_MS = 30_000; // never re-attempt a UID more than once per 30s
-    const isIncomplete = (i: typeof items[number]) =>
-      !i.real_name || !i.username || !i.photo_url || !i.follower_count;
-    const isComplete = (i: typeof items[number]) =>
-      !!i.real_name && !!i.username && !!i.photo_url && !!i.follower_count;
-    const now = Date.now();
-    const candidates: typeof items = [];
-    for (const i of items) {
-      if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") continue;
-      // LOCK: once a UID has full data (name + username + photo + followers), never re-fetch.
-      if (isComplete(i)) continue;
-      // Cooldown: don't hammer a UID we just tried.
-      if (i.fetch_last_attempt_at && now - new Date(i.fetch_last_attempt_at).getTime() < COOLDOWN_MS) continue;
-      // Cap not_found retries — these are usually permanently missing.
-      if (i.fetch_status === "not_found") {
-        const tries = retryCountsRef.current.get(i.uid) ?? 0;
-        if (tries >= NOT_FOUND_MAX) continue;
-        candidates.push(i);
-      } else if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") {
-        candidates.push(i);
-      } else if (!i.fetch_status && isIncomplete(i)) {
-        candidates.push(i);
-      } else if (i.fetch_status === "done" && isIncomplete(i)) {
-        candidates.push(i);
-      }
-      if (candidates.length >= scanLimit) break;
-    }
-    // Group candidates by status so we can batch them into a single edge
-    // call per status bucket — sending one UID at a time was the main reason
-    // live fetches were slow and few results came back.
-    const buckets: Record<string, typeof candidates> = { rate_limited: [], not_found: [], other: [] };
-    for (const it of candidates) {
-      if (retryTimersRef.current.has(it.uid)) continue;
-      const tries = retryCountsRef.current.get(it.uid) ?? 0;
-      if (tries >= MAX) continue;
-      const key = it.fetch_status === "rate_limited" ? "rate_limited"
-        : it.fetch_status === "not_found" ? "not_found" : "other";
-      buckets[key].push(it);
-    }
-    const scheduleBatch = (group: typeof candidates, delay: number) => {
+    const NOT_FOUND_MAX = 3;
+    const COOLDOWN_MS = 30_000;
+    let cancelled = false;
+
+    const scheduleBatch = (
+      group: Array<{ uid: string; tries: number }>,
+      delay: number,
+    ) => {
       if (!group.length) return;
-      // Cap each batch to 50 (edge-function max). Extra items will be picked
-      // up on the next scheduling tick after this one fires.
       const batch = group.slice(0, 25);
       const eta = Date.now() + delay;
       for (const it of batch) {
-        const tries = retryCountsRef.current.get(it.uid) ?? 0;
         retryEtaRef.current.set(it.uid, eta);
-        // sentinel timer so candidate isn't re-scheduled while waiting
         retryTimersRef.current.set(it.uid, 0 as unknown as number);
-        retryCountsRef.current.set(it.uid, tries + 1);
+        retryCountsRef.current.set(it.uid, it.tries + 1);
       }
       const timer = window.setTimeout(() => {
         for (const it of batch) {
@@ -127,22 +90,36 @@ export default function Home() {
         }
         fetchProfiles(batch.map((b) => b.uid));
       }, delay);
-      // Remember the real timer on the first uid so unmount-clear still works.
       if (batch[0]) retryTimersRef.current.set(batch[0].uid, timer);
     };
-    // Status-aware backoff per bucket. Use the *minimum* tries in the bucket
-    // so a fresh failure isn't punished by an older one's history.
-    const bucketDelay = (status: "rate_limited" | "not_found" | "other", group: typeof candidates) => {
-      const minTries = Math.min(...group.map((g) => retryCountsRef.current.get(g.uid) ?? 0));
+    const bucketDelay = (
+      status: "rate_limited" | "not_found" | "other",
+      group: Array<{ uid: string; tries: number }>,
+    ) => {
+      const minTries = Math.min(...group.map((g) => g.tries));
       if (status === "rate_limited") return Math.min(15_000 * Math.pow(1.8, minTries), 600_000);
       if (status === "not_found") return Math.min(60_000 * Math.pow(2, minTries), 900_000);
       return Math.min(2000 * Math.pow(2, minTries), 300_000);
     };
-    if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
-    if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
-    if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
+
+    scanInWorker({
+      items,
+      retryCounts: Array.from(retryCountsRef.current.entries()),
+      scheduledUids: Array.from(retryTimersRef.current.keys()),
+      now: Date.now(),
+      scanLimit: 300,
+      max: MAX,
+      notFoundMax: NOT_FOUND_MAX,
+      cooldownMs: COOLDOWN_MS,
+    }).then((buckets) => {
+      if (cancelled) return;
+      if (buckets.other.length) scheduleBatch(buckets.other, bucketDelay("other", buckets.other));
+      if (buckets.rate_limited.length) scheduleBatch(buckets.rate_limited, bucketDelay("rate_limited", buckets.rate_limited));
+      if (buckets.not_found.length) scheduleBatch(buckets.not_found, bucketDelay("not_found", buckets.not_found));
+    }).catch(() => { /* ignore */ });
+
     return () => {
-      // do not clear timers on every render — only on unmount
+      cancelled = true;
     };
   }, [items, autoRetry, fetchProfiles]);
   useEffect(() => {

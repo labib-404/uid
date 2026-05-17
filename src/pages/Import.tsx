@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useFBIds, genId } from "@/hooks/useFBIds";
 import { useFBProfile } from "@/hooks/useFBProfile";
+import { chunkInWorker } from "@/workers/heavyClient";
 import { FBId } from "@/types/fbid";
 
 export default function Import() {
@@ -67,8 +68,7 @@ export default function Import() {
       const PARALLEL = 2;
       const PRIME = Math.min(uids.length, BATCH * PARALLEL * 2); // first ~200
       const primeUids = uids.slice(0, PRIME);
-      const batches: string[][] = [];
-      for (let i = 0; i < primeUids.length; i += BATCH) batches.push(primeUids.slice(i, i + BATCH));
+      const batches = await chunkInWorker(primeUids, BATCH);
       let cursor = 0;
       const worker = async () => {
         while (cursor < batches.length) {
