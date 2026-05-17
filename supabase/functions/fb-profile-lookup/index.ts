@@ -294,6 +294,11 @@ const IG_RESERVED = new Set([
 ]);
 
 type IgCheck = { exists: boolean; rateLimited?: boolean };
+type LookupResult = ReturnType<typeof parseProfile> & {
+  photoUrl?: string | null;
+  instagramRateLimited?: boolean;
+  error?: "rate_limited" | "not_found" | "no_data";
+};
 
 const IG_TTL = 1000 * 60 * 60 * 12; // 12h
 const IG_CACHE = new Map<string, { exists: boolean; at: number; canonical?: string }>();
@@ -462,7 +467,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const results: Record<string, any> = {};
+    const results: Record<string, LookupResult> = {};
     // Limit concurrency aggressively to avoid partial fetches and rate-limits.
     const CONCURRENCY = 3;
     const queue = [...uids];

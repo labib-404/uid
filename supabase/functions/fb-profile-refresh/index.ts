@@ -9,6 +9,16 @@ const corsHeaders = {
 // Designed to be invoked by pg_cron on a schedule. Processes a small batch per run.
 const STALE_AFTER_HOURS = 11; // refresh just before 12h cache TTL elapses
 const BATCH_SIZE = 15;
+type LookupResult = {
+  name?: string | null;
+  username?: string | null;
+  photoUrl?: string | null;
+  followerCount?: string | null;
+  friendCount?: string | null;
+  nationality?: string | null;
+  instagramUsername?: string | null;
+  error?: string;
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -58,7 +68,7 @@ Deno.serve(async (req) => {
       throw new Error(`lookup failed: ${lookupRes.status} ${t}`);
     }
     const { results = {} } = (await lookupRes.json()) as {
-      results: Record<string, any>;
+      results: Record<string, LookupResult>;
     };
 
     let updated = 0;
@@ -67,7 +77,7 @@ Deno.serve(async (req) => {
       list.map(async (row) => {
         const r = results[row.uid];
         if (!r || r.error) return;
-        const patch: Record<string, any> = { profile_fetched_at: now };
+        const patch: Record<string, string | null> = { profile_fetched_at: now };
         if (r.name != null) patch.real_name = r.name;
         if (r.username != null) patch.username = r.username;
         if (r.photoUrl != null) patch.photo_url = r.photoUrl;

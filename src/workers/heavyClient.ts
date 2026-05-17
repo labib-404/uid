@@ -3,22 +3,24 @@
 // every helper transparently falls back to running the same logic on the
 // main thread so the app keeps working.
 
-type PendingResolver = (value: any) => void;
+type PendingResolver = (value: unknown) => void;
+type WorkerMessage = { id: number; ok: boolean; result?: unknown; error?: string };
 
 let worker: Worker | null = null;
 let nextId = 1;
-const pending = new Map<number, { resolve: PendingResolver; reject: (e: any) => void }>();
+const pending = new Map<number, { resolve: PendingResolver; reject: (e: Error) => void }>();
 
 function ensureWorker(): Worker | null {
   if (worker) return worker;
   if (typeof Worker === "undefined") return null;
   try {
     worker = new Worker(new URL("./heavy.worker.ts", import.meta.url), { type: "module" });
-    worker.onmessage = (e: MessageEvent<{ id: number; ok: boolean; result?: any; error?: string }>) => {
+    worker.onmessage = (e: MessageEvent<WorkerMessage>) => {
       const p = pending.get(e.data.id);
       if (!p) return;
       pending.delete(e.data.id);
-      e.data.ok ? p.resolve(e.data.result) : p.reject(new Error(e.data.error ?? "worker error"));
+      if (e.data.ok) p.resolve(e.data.result);
+      else p.reject(new Error(e.data.error ?? "worker error"));
     };
     worker.onerror = () => { /* swallow — fallbacks kick in */ };
   } catch {
@@ -27,19 +29,19 @@ function ensureWorker(): Worker | null {
   return worker;
 }
 
-function send<T = any>(payload: any): Promise<T> | null {
+function send<T>(payload: Record<string, unknown>): Promise<T> | null {
   const w = ensureWorker();
   if (!w) return null;
   const id = nextId++;
   return new Promise<T>((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    w.postMessage({ ...payload, id });
+      w.postMessage({ ...payload, id });
   });
 }
 
 // ---------- Public API ----------
 
-export function compactInWorker<T extends Record<string, any>>(items: T[]): Promise<T[]> {
+export function compactInWorker<T extends object>(items: T[]): Promise<T[]> {
   const p = send<T[]>({ kind: "compact", items });
   if (p) return p;
   // Main-thread fallback: keep items untouched so base64 photos persist.
@@ -53,7 +55,7 @@ export type ScanBuckets = {
 };
 
 export function scanInWorker(args: {
-  items: any[];
+  items: unknown[];
   retryCounts: Array<[string, number]>;
   scheduledUids: string[];
   now: number;

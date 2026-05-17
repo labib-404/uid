@@ -56,7 +56,7 @@ const COMPLETE_LOCKS: Set<string> = (() => {
   } catch { return new Set(); }
 })();
 function persistCompletes() {
-  try { localStorage.setItem(COMPLETE_KEY, JSON.stringify([...COMPLETE_LOCKS])); } catch {}
+  try { localStorage.setItem(COMPLETE_KEY, JSON.stringify([...COMPLETE_LOCKS])); } catch { /* localStorage may be unavailable */ }
 }
 export function unlockUid(uid: string) {
   COMPLETE_LOCKS.delete(uid);
@@ -233,10 +233,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
           }
         }
         persistCompletes();
-        const notFound = list.filter((u) => classifyError(results[u]) === "not_found").length;
-        const rateLim = list.filter((u) => classifyError(results[u]) === "rate_limited").length;
-        const otherFail = failCount - notFound - rateLim;
-      } catch (e: any) {
+      } catch {
         setItems((prev) =>
           prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false, fetch_status: "failed" } : p))
         );
@@ -245,7 +242,6 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         setLoading(false);
         releaseSlot();
         return;
-      } finally {
       }
       list.forEach((u) => FETCH_LOCKS.delete(u));
       bumpEnd(list.length, okCount, failCount);
@@ -311,7 +307,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
         );
         bumpEnd(list.length, okCount, failCount);
         return;
-      } catch (e: any) {
+      } catch {
         setItems((prev) => prev.map((p) => (listSet.has(p.uid) ? { ...p, instagram_checking: false } : p)));
         bumpEnd(list.length, 0, list.length);
         return;
