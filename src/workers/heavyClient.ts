@@ -41,7 +41,7 @@ function send<T>(payload: Record<string, unknown>): Promise<T> | null {
 
 // ---------- Public API ----------
 
-export function compactInWorker<T extends Record<string, unknown>>(items: T[]): Promise<T[]> {
+export function compactInWorker<T extends object>(items: T[]): Promise<T[]> {
   const p = send<T[]>({ kind: "compact", items });
   if (p) return p;
   // Main-thread fallback: keep items untouched so base64 photos persist.
@@ -55,7 +55,7 @@ export type ScanBuckets = {
 };
 
 export function scanInWorker(args: {
-  items: Array<Record<string, unknown>>;
+  items: unknown[];
   retryCounts: Array<[string, number]>;
   scheduledUids: string[];
   now: number;
