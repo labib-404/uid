@@ -49,15 +49,10 @@ function notifyListeners() {
 }
 
 function compactForStorage(items: FBId[]) {
-  return items.map((item) => {
-    if (item.photo_url?.startsWith("data:image/")) {
-      const stablePhotoUrl = /^\d+$/.test(item.uid)
-        ? `https://graph.facebook.com/${item.uid}/picture?type=large&width=200&height=200`
-        : item.photo_url;
-      return { ...item, photo_url: stablePhotoUrl };
-    }
-    return item;
-  });
+  // Keep base64 photos as-is so avatars survive a hard reload. If storage
+  // ever fills up, writeStorage()'s catch will silently drop the write —
+  // the in-memory cache still serves the current session.
+  return items;
 }
 
 function writeStorage(items: FBId[]) {
