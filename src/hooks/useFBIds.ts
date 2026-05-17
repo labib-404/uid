@@ -4,13 +4,22 @@ import { compactInWorker } from "@/workers/heavyClient";
 
 const STORAGE_KEY = "fb_ids_v1";
 
+function restoreStablePhotoUrl(item: FBId): FBId {
+  if (item.photo_url || !/^\d+$/.test(item.uid)) return item;
+  if (!item.real_name && !item.username && !item.profile_fetched_at && item.fetch_status !== "done") return item;
+  return {
+    ...item,
+    photo_url: `https://graph.facebook.com/${item.uid}/picture?type=large&width=200&height=200`,
+  };
+}
+
 function load(): FBId[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    const items = arr as FBId[];
+    const items = (arr as FBId[]).map(restoreStablePhotoUrl);
     if (raw.includes('"photo_url":"data:image/')) {
       // Offload the strip-base64 pass to the worker, then re-persist.
       compactInWorker(items).then((compacted) => {
