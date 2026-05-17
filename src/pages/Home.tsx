@@ -7,6 +7,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { scanInWorker } from "@/workers/heavyClient";
 import NoteDialog from "@/components/NoteDialog";
 import VirtualFBList from "@/components/VirtualFBList";
+import TopLoadingBar from "@/components/TopLoadingBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -334,6 +335,17 @@ export default function Home() {
     return { tracked, done, retrying, failed };
   }, [items]);
   const showImportBar = importProgress.retrying > 0 || igProgress.total > 0;
+  // Global thin loader: visible while we're still fetching profile data,
+  // OR while items exist but none have resolved any profile fields yet
+  // (covers the gap between "just imported" and "first batch returns").
+  const firstResolved = useMemo(
+    () => items.some((i) => i.real_name || i.username || i.photo_url),
+    [items]
+  );
+  const showTopLoader =
+    importProgress.retrying > 0 ||
+    igProgress.processing > 0 ||
+    (items.length > 0 && !firstResolved);
 
   // 1Hz tick that drives the next-retry countdown while the bar is visible.
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -357,6 +369,7 @@ export default function Home() {
 
   return (
     <div className="space-y-3">
+      <TopLoadingBar show={showTopLoader} label="Loading profiles" />
       <div className="border-b border-border pb-3">
         <h1 className="text-2xl font-semibold">Home</h1>
         <p className="text-xs text-muted-foreground mt-1">
