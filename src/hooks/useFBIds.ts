@@ -20,7 +20,7 @@ function load(): FBId[] {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     const items = (arr as FBId[]).map(restoreStablePhotoUrl);
-    if (raw.includes('"photo_url":"data:image/')) {
+    if (raw.includes("data:image/")) {
       // Offload the strip-base64 pass to the worker, then re-persist.
       compactInWorker(items).then((compacted) => {
         memCache = compacted;
@@ -49,10 +49,17 @@ function notifyListeners() {
 }
 
 function compactForStorage(items: FBId[]) {
-  // Keep base64 photos as-is so avatars survive a hard reload. If storage
-  // ever fills up, writeStorage()'s catch will silently drop the write —
-  // the in-memory cache still serves the current session.
-  return items;
+  // Do not write base64 avatars to localStorage. They dramatically increase
+  // startup parse time and write stalls; graph URLs are restored on load.
+  return items.map((item) => {
+    if (!item.photo_url?.startsWith("data:image/")) return item;
+    return {
+      ...item,
+      photo_url: /^\d+$/.test(item.uid)
+        ? `https://graph.facebook.com/${item.uid}/picture?type=large&width=200&height=200`
+        : null,
+    };
+  });
 }
 
 function writeStorage(items: FBId[]) {

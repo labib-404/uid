@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Upload, FileText, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -87,10 +86,7 @@ export default function Import() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
-    >
+    <div className="space-y-4 animate-fade-in">
       <div className="border-b border-border pb-3">
         <h1 className="text-2xl font-semibold">Import</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -116,6 +112,6 @@ export default function Import() {
           </Button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

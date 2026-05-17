@@ -83,6 +83,13 @@ function hasUsefulProfileResult(result?: ProfileResult | null) {
   );
 }
 
+function stablePhotoUrl(uid: string, photo?: string | null) {
+  if (!photo?.startsWith("data:image/")) return photo || null;
+  return /^\d+$/.test(uid)
+    ? `https://graph.facebook.com/${uid}/picture?type=large&width=200&height=200`
+    : null;
+}
+
 export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
   const [loading, setLoading] = useState(false);
   const progressRef = useRef(EMPTY_PROGRESS);
@@ -209,7 +216,7 @@ export function useFBProfile(setItems: (u: (prev: FBId[]) => FBId[]) => void) {
               ...p,
               real_name: r.name ?? p.real_name ?? null,
               username: r.username ?? p.username ?? null,
-              photo_url: r.photoUrl || p.photo_url || null,
+              photo_url: stablePhotoUrl(p.uid, r.photoUrl) || stablePhotoUrl(p.uid, p.photo_url) || null,
               follower_count: r.followerCount ?? p.follower_count ?? null,
               friend_count: r.friendCount ?? p.friend_count ?? null,
               nationality: r.nationality ?? p.nationality ?? null,

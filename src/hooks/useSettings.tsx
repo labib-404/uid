@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 
 type FontSize = "sm" | "md" | "lg";
 type ViewMode = "full" | "compact";
@@ -51,12 +51,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => localStorage.setItem("swipeDelete", String(swipeDelete)), [swipeDelete]);
   useEffect(() => localStorage.setItem("autoRetry", String(autoRetry)), [autoRetry]);
 
-  return (
-    <Ctx.Provider value={{
+  const value = useMemo<Settings>(() => ({
       fontSize, viewMode, theme, swipeDelete, autoRetry,
       setFontSize, setViewMode, setTheme,
       setSwipeDelete, setAutoRetry,
-    }}>
+    }), [autoRetry, fontSize, swipeDelete, theme, viewMode]);
+
+  return (
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   );

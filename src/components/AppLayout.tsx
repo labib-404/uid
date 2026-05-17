@@ -107,7 +107,7 @@ export default function AppLayout() {
         className="fixed left-1/2 -translate-x-1/2 bottom-3 z-40 w-[min(92%,28rem)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="bg-background border border-border rounded-[28px] shadow-2xl p-1.5 flex items-stretch justify-between">
+        <div className="bg-background border border-border rounded-[28px] shadow-brutal p-1.5 flex items-stretch justify-between">
           {tabs.map((t) => (
             <NavLink key={t.to} to={t.to} end className="flex-1">
               {({ isActive }) => (
