@@ -1,5 +1,5 @@
-import { useState, memo } from "react";
-import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
+import { memo, useCallback, useRef } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
  Star, Check, Trash2, Copy, ExternalLink, Tag as TagIcon, StickyNote, MoreVertical, RefreshCw, Users, UserPlus, Instagram, Loader2, AlertTriangle, Clock,
 } from "lucide-react";
@@ -87,10 +87,9 @@ function Avatar({ uid, name, username, photo, size = 40, loading = false }: { ui
 
 function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOpenNote, onFetchProfile, onRecheckInstagram }: Props) {
   const { viewMode, swipeDelete } = useSettings();
-  const x = useMotionValue(0);
-  const bgOpacity = useTransform(x, [-160, -20, 0], [1, 0.15, 0]);
-  const iconScale = useTransform(x, [-160, -60, 0], [1, 0.6, 0.4]);
-  const [axisLocked, setAxisLocked] = useState<"x" | "y" | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const deleteBgRef = useRef<HTMLDivElement | null>(null);
+  const deleteIconRef = useRef<HTMLDivElement | null>(null);
 
   const update = (patch: Partial<FBId>) => onChange({ ...item, ...patch });
 
@@ -103,13 +102,67 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
     navigator.clipboard.writeText(text);
   };
 
-  const onDragEnd = (_: unknown, info: PanInfo) => {
-    setAxisLocked(null);
-    if (axisLocked === "y") { animate(x, 0, { type: "spring", stiffness: 500, damping: 40 }); return; }
-    const shouldDelete = info.offset.x < -120 || info.velocity.x < -600;
-    if (shouldDelete) animate(x, -window.innerWidth, { duration: 0.25, ease: "easeOut", onComplete: onDelete });
-    else animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
-  };
+  const resetSwipe = useCallback(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)";
+    card.style.transform = "translate3d(0,0,0)";
+    if (deleteBgRef.current) deleteBgRef.current.style.opacity = "0";
+    if (deleteIconRef.current) deleteIconRef.current.style.transform = "scale(0.4)";
+  }, []);
+
+  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!swipeDelete || (event.pointerType === "mouse" && event.button !== 0)) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button,a,input,textarea,[role='button'],[role='checkbox']")) return;
+    const card = cardRef.current;
+    if (!card) return;
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startTime = performance.now();
+    let axis: "x" | "y" | null = null;
+    card.style.transition = "none";
+
+    const move = (e: PointerEvent) => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!axis && Math.hypot(dx, dy) > 8) axis = Math.abs(dx) > Math.abs(dy) * 1.25 ? "x" : "y";
+      if (axis !== "x") return;
+      if (e.cancelable) e.preventDefault();
+      const x = Math.min(0, Math.max(-220, dx));
+      const progress = Math.min(1, Math.abs(x) / 160);
+      card.style.transform = `translate3d(${x}px,0,0)`;
+      if (deleteBgRef.current) deleteBgRef.current.style.opacity = String(progress);
+      if (deleteIconRef.current) deleteIconRef.current.style.transform = `scale(${0.4 + progress * 0.6})`;
+    };
+
+    const up = (e: PointerEvent) => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+      if (axis !== "x") { resetSwipe(); return; }
+      const dx = e.clientX - startX;
+      const velocity = dx / Math.max(1, performance.now() - startTime);
+      if (dx < -120 || velocity < -0.6) {
+        card.style.transition = "transform 180ms ease-out";
+        card.style.transform = `translate3d(${-window.innerWidth}px,0,0)`;
+        window.setTimeout(onDelete, 180);
+        return;
+      }
+      resetSwipe();
+    };
+    const cancel = () => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+      resetSwipe();
+    };
+
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+  }, [onDelete, resetSwipe, swipeDelete]);
 
   const setTag = (t: Tag | null) => update({ tag: t });
   const confirmDelete = () => { if (window.confirm(`Delete ${item.uid}?`)) onDelete(); };
@@ -125,27 +178,20 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
   return (
     <div className="relative overflow-hidden touch-pan-y group">
       {swipeDelete && (
-        <motion.div
-          style={{ opacity: bgOpacity }}
+        <div
+          ref={deleteBgRef}
+          style={{ opacity: 0 }}
           className="absolute inset-0 bg-destructive rounded-md flex items-center justify-end pr-6 pointer-events-none"
         >
-          <motion.div style={{ scale: iconScale }}>
+          <div ref={deleteIconRef} style={{ transform: "scale(0.4)" }}>
             <Trash2 className="text-destructive-foreground w-5 h-5" />
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
-      <motion.div
-        {...(swipeDelete
-          ? {
-              drag: "x" as const,
-              dragDirectionLock: true,
-              onDirectionLock: (axis: "x" | "y") => setAxisLocked(axis),
-              dragConstraints: { left: -200, right: 0 },
-              dragElastic: { left: 0.2, right: 0 },
-              style: { x },
-              onDragEnd,
-            }
-          : {})}
+      <div
+        ref={cardRef}
+        onPointerDown={onPointerDown}
+        style={swipeDelete ? { touchAction: "pan-y", willChange: "transform" } : undefined}
         className={`relative bg-card border border-border rounded-md shadow-card transition-colors hover:bg-secondary/30 ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} ${compact ? "p-2.5" : "p-3.5"}`}
       >
         <div className="flex items-start gap-3">
@@ -365,7 +411,7 @@ function FBIdItemBase({ item, selected, onToggleSelect, onChange, onDelete, onOp
             </DropdownMenu>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
