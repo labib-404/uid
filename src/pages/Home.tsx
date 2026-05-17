@@ -142,7 +142,7 @@ export default function Home() {
       delay: number,
     ) => {
       if (!group.length) return;
-      const batch = group.slice(0, 25);
+      const batch = group.slice(0, 15);
       const eta = Date.now() + delay;
       for (const it of batch) {
         retryEtaRef.current.set(it.uid, eta);
@@ -278,6 +278,7 @@ export default function Home() {
   const fetchMissing = () => {
     const missing = items
       .filter((i) => !i.real_name && !i.username && !i.photo_url && i.fetch_status !== "done")
+      .slice(0, 15)
       .map((i) => i.uid);
     if (!missing.length) return;
     fetchProfiles(missing);
@@ -310,7 +311,7 @@ export default function Home() {
     );
     // Kick the first slice now; the auto-retry loop drains the rest under
     // the global concurrency gate.
-    fetchProfiles(uids.slice(0, 50));
+    fetchProfiles(uids.slice(0, 15));
   };
 
   const recheckAllInstagram = () => {
