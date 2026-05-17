@@ -16,6 +16,49 @@ const FB_HEADERS: Record<string, string> = {
   "cache-control": "no-cache",
 };
 
+function collectConfiguredKeys(): Set<string> {
+  const keys = new Set<string>();
+  const add = (value?: string | null) => {
+    const trimmed = value?.trim();
+    if (trimmed) keys.add(trimmed);
+  };
+  add(Deno.env.get("SUPABASE_ANON_KEY"));
+  add(Deno.env.get("SUPABASE_PUBLISHABLE_KEY"));
+  add(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  for (const name of ["SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_SECRET_KEYS"]) {
+    const raw = Deno.env.get(name);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      const values = Array.isArray(parsed) ? parsed : Object.values(parsed ?? {});
+      values.forEach((value) => typeof value === "string" && add(value));
+    } catch {
+      raw.split(/[\s,]+/).forEach(add);
+    }
+  }
+  return keys;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isProjectAnonKey(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  const projectRef = Deno.env.get("SUPABASE_URL")?.match(/https:\/\/([^.]+)\./)?.[1];
+  const exp = typeof payload.exp === "number" ? payload.exp : 0;
+  return payload.iss === "supabase" && payload.role === "anon" && payload.ref === projectRef && exp > Math.floor(Date.now() / 1000);
+}
+
 function formatFollowers(raw: string): string {
   const n = parseInt(raw.replace(/,/g, ""), 10);
   if (isNaN(n)) return raw;
@@ -382,15 +425,18 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const token = authHeader.replace("Bearer ", "");
-    // Accept project keys (anon / service-role) — gates the function to this project only
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    let authorized = token === anonKey || token === serviceKey;
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const apiKey = req.headers.get("apikey")?.trim();
+    // Accept project keys from either Authorization or apikey headers. Lovable Cloud can expose
+    // the public key under either SUPABASE_ANON_KEY or SUPABASE_PUBLISHABLE_KEY depending on runtime.
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+    const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")?.trim();
+    const projectKeys = collectConfiguredKeys();
+    let authorized = projectKeys.has(token) || (!!apiKey && projectKeys.has(apiKey)) || isProjectAnonKey(token) || (!!apiKey && isProjectAnonKey(apiKey));
     if (!authorized) {
       const authClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
-        anonKey!,
+        anonKey ?? publishableKey!,
       );
       const { data, error: userErr } = await authClient.auth.getUser(token);
       authorized = !userErr && !!data?.user;
