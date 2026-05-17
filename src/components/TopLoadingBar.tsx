@@ -27,7 +27,8 @@ function TopLoadingBarImpl({ show, label }: { show: boolean; label?: string }) {
       role="progressbar"
       aria-busy="true"
       aria-label={label ?? "Loading"}
-      className={`pointer-events-none fixed top-0 left-0 right-0 z-50 h-[2px] overflow-hidden bg-primary/10 transition-opacity duration-300 ease-out ${visible ? "opacity-100" : "opacity-0"}`}
+      style={{ top: "var(--header-h, 0px)" }}
+      className={`pointer-events-none fixed left-0 right-0 z-50 h-[2px] overflow-hidden bg-primary/10 transition-[top,opacity] duration-300 ease-out motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
     >
       <div className="loading-bar-track h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
     </div>
