@@ -14,6 +14,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Require shared cron secret — this function reads all users' data via service role
+    const expected = Deno.env.get("CRON_SECRET");
+    const provided = req.headers.get("x-cron-secret");
+    if (!expected || provided !== expected) {
+      return json({ error: "Forbidden" }, 403);
+    }
+
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -78,7 +85,8 @@ Deno.serve(async (req) => {
 
     return json({ refreshed: updated, scanned: list.length });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error("fb-profile-refresh error:", e);
+    return json({ error: "Internal server error" }, 500);
   }
 });
 
