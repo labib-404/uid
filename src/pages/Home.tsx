@@ -404,25 +404,10 @@ export default function Home() {
     igProgress.processing > 0 ||
     (items.length > 0 && !firstResolved);
 
-  // 1Hz tick that drives the next-retry countdown while the bar is visible.
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => {
-    if (!showImportBar) return;
-    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [showImportBar]);
-  const nextRetryInfo = useMemo(() => {
-    let soonest = Infinity;
-    let queued = 0;
-    for (const eta of retryEtaRef.current.values()) {
-      queued++;
-      if (eta < soonest) soonest = eta;
-    }
-    if (!queued || !isFinite(soonest)) return { queued: 0, secs: 0 };
-    return { queued, secs: Math.max(0, Math.ceil((soonest - nowTick) / 1000)) };
-  }, [nowTick, importProgress.retrying]);
-  const fmtSecs = (s: number) =>
-    s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+  // Queued-count snapshot updates only when the retry pipeline mutates,
+  // not every second — the countdown itself ticks inside a child component
+  // so the whole Home tree doesn't re-render at 1Hz.
+  const queuedRetryCount = importProgress.retrying;
 
   const importBarRef = useRef<HTMLDivElement | null>(null);
   const [importBarHeight, setImportBarHeight] = useState(0);
