@@ -29,6 +29,41 @@ import { FBId } from "@/types/fbid";
 type Filter = "all" | "checked" | "unchecked" | "saved" | "noted" | "tagged";
 type Sort = "newest" | "oldest" | "checked" | "unchecked" | "saved";
 
+const fmtSecs = (s: number) =>
+  s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+
+// Isolated 1Hz ticker so the parent Home tree (including the virtualized
+// list) doesn't re-render every second while an import is in flight.
+function NextRetryCountdown({
+  etaRef,
+}: {
+  etaRef: React.MutableRefObject<Map<string, number>>;
+}) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  let soonest = Infinity;
+  let queued = 0;
+  for (const eta of etaRef.current.values()) {
+    queued++;
+    if (eta < soonest) soonest = eta;
+  }
+  if (!queued || !isFinite(soonest)) return null;
+  const secs = Math.max(0, Math.ceil((soonest - Date.now()) / 1000));
+  return (
+    <div
+      className="flex items-center gap-2 text-[10px] text-muted-foreground"
+      aria-hidden="true"
+    >
+      <span>Next retry in <span className="text-foreground tabular-nums">{fmtSecs(secs)}</span></span>
+      <span className="opacity-60">·</span>
+      <span>{queued} queued</span>
+    </div>
+  );
+}
+
 export default function Home() {
   const { items, setItems, loading } = useFBIds();
   const { fetchProfiles, recheckInstagram, loading: fetching, igProgress } = useFBProfile(setItems);
