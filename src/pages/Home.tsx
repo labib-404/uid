@@ -196,9 +196,10 @@ export default function Home() {
     };
   }, [items, autoRetry, fetchProfiles]);
   useEffect(() => {
+    const timers = retryTimersRef.current;
     return () => {
-      retryTimersRef.current.forEach((t) => clearTimeout(t));
-      retryTimersRef.current.clear();
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
     };
   }, []);
 
