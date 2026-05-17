@@ -88,9 +88,8 @@
   body {
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(60% 45% at 12% 8%,  hsl(192 90% 55% / 0.28), transparent 70%),
-      radial-gradient(55% 40% at 92% 88%, hsl(175 85% 50% / 0.22), transparent 70%),
-      radial-gradient(45% 35% at 50% 55%, hsl(220 85% 55% / 0.18), transparent 70%);
+      radial-gradient(60% 45% at 12% 8%,  hsl(192 90% 55% / 0.20), transparent 70%),
+      radial-gradient(55% 40% at 92% 88%, hsl(175 85% 50% / 0.16), transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }
@@ -114,31 +113,29 @@
   .bg-gradient-primary { background: var(--gradient-primary); }
   .bg-gradient-mesh { background: var(--gradient-mesh); }
   .bg-gradient-glow { background: var(--gradient-glow); }
-  /* 💧 Liquid glass — frosted aqua surface for chrome */
+  /* 💧 Liquid glass — for chrome only (header / bottom nav). Cheaper blur. */
   .glass {
-    background: linear-gradient(135deg, hsl(192 90% 55% / 0.10), hsl(205 60% 8% / 0.55));
-    backdrop-filter: blur(22px) saturate(160%);
-    -webkit-backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid hsl(190 100% 90% / 0.10);
-  }
-  /* Soft water card */
-  .brutal {
+    background: hsl(205 60% 8% / 0.65);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid hsl(190 100% 90% / 0.08);
-    background: linear-gradient(135deg, hsl(190 100% 90% / 0.04), hsl(205 60% 8% / 0.20));
-    border-radius: 1.25rem;
-    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.06), 0 4px 24px hsl(205 80% 4% / 0.35);
-    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s ease;
   }
-  .brutal:hover { border-color: hsl(192 90% 55% / 0.35); box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.08), 0 12px 40px hsl(192 90% 30% / 0.35); }
+  /* Soft water card — NO backdrop-filter, NO transitions (used in long lists) */
+  .brutal {
+    border: 1px solid hsl(190 100% 90% / 0.07);
+    background: hsl(205 50% 10% / 0.55);
+    border-radius: 1.25rem;
+    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.05);
+  }
   .brutal-lg {
-    border: 1px solid hsl(190 100% 90% / 0.10);
-    background: linear-gradient(135deg, hsl(190 100% 90% / 0.05), hsl(205 60% 8% / 0.25));
-    border-radius: 1.75rem;
-    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.07), 0 8px 40px hsl(205 80% 4% / 0.45);
+    border: 1px solid hsl(190 100% 90% / 0.09);
+    background: hsl(205 50% 10% / 0.6);
+    border-radius: 1.5rem;
+    box-shadow: inset 0 1px 0 hsl(190 100% 90% / 0.06);
   }
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-card { box-shadow: var(--shadow-card); }
-  .tap { @apply active:scale-[0.97]; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  .tap { @apply active:scale-[0.97]; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: linear-gradient(180deg, hsl(192 90% 55% / 0.5), hsl(175 85% 50% / 0.5)); border-radius: 3px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
