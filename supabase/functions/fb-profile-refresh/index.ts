@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Require shared cron secret — this function reads all users' data via service role
+    // Require shared cron secret — this function reads ALL users' rows via service role
     const expected = Deno.env.get("CRON_SECRET");
     const provided = req.headers.get("x-cron-secret");
     if (!expected || provided !== expected) {
