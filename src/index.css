@@ -150,7 +150,12 @@
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+@keyframes loading-bar-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
 @layer utilities {
   .animate-shake { animation: shake 0.4s ease-in-out; }
   .animate-blink { animation: blink 1.1s steps(1) infinite; }
+  .loading-bar-track { animation: loading-bar-slide 1.1s ease-in-out infinite; will-change: transform; }
 }
