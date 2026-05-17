@@ -393,6 +393,42 @@ export default function Home() {
   const fmtSecs = (s: number) =>
     s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 
+  const importBarRef = useRef<HTMLDivElement | null>(null);
+  const [importBarHeight, setImportBarHeight] = useState(0);
+  useEffect(() => {
+    if (!showImportBar) {
+      setImportBarHeight(0);
+      return;
+    }
+    const el = importBarRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      setImportBarHeight(Math.ceil(el.getBoundingClientRect().height));
+    };
+    measure();
+
+    const hasRO = typeof ResizeObserver !== "undefined";
+    let ro: ResizeObserver | null = null;
+    const fallbackTimers: number[] = [];
+    if (hasRO) {
+      ro = new ResizeObserver(measure);
+      ro.observe(el);
+    } else {
+      for (const delay of [120, 400, 1200]) {
+        fallbackTimers.push(window.setTimeout(measure, delay));
+      }
+    }
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      ro?.disconnect();
+      for (const t of fallbackTimers) clearTimeout(t);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [showImportBar, nextRetryInfo.queued]);
+
   return (
     <div className="space-y-3">
       <TopLoadingBar show={showTopLoader} label="Loading profiles" />
@@ -404,11 +440,13 @@ export default function Home() {
       </div>
       {showImportBar && (
         <div
-          className="sticky z-30 -mx-4 px-4 pt-2 pb-3 bg-background backdrop-blur-md border-b border-white/10 shadow-[0_8px_16px_-12px_rgba(0,0,0,0.6)] transition-[top] duration-300 ease-out motion-reduce:transition-none"
+          ref={importBarRef}
+          className="fixed inset-x-0 z-40 bg-background border-b border-border shadow-brutal transition-[top] duration-300 ease-out motion-reduce:transition-none"
           style={{ top: "var(--header-h, 56px)" }}
           role="region"
           aria-label="Import progress"
         >
+          <div className="max-w-3xl mx-auto px-4 pt-2 pb-3">
           <div className="brutal px-3 py-2 space-y-1.5">
             <div className="flex items-center gap-2 text-xs">
               <RefreshCw className="w-3 h-3 animate-spin text-primary" aria-hidden="true" />
@@ -472,7 +510,15 @@ export default function Home() {
                   }`}
             </p>
           </div>
+          </div>
         </div>
+      )}
+      {showImportBar && (
+        <div
+          aria-hidden="true"
+          className="shrink-0 transition-[height] duration-300 ease-out motion-reduce:transition-none"
+          style={{ height: importBarHeight }}
+        />
       )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {stats.map((s) => (
