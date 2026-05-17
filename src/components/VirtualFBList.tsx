@@ -66,9 +66,12 @@ function VirtualFBListImpl({
   const virtualizer = useWindowVirtualizer({
     count: rows.length,
     estimateSize: () => (compact ? 96 : 128),
-    overscan: 6,
+    overscan: 3,
     scrollMargin: offsetTop,
-    measureElement: (el) => el.getBoundingClientRect().height,
+    measureElement:
+      typeof ResizeObserver !== "undefined"
+        ? (el) => el.getBoundingClientRect().height
+        : undefined,
   });
 
   const virtualRows = virtualizer.getVirtualItems();
@@ -90,6 +93,7 @@ function VirtualFBListImpl({
               width: "100%",
               transform: `translateY(${vrow.start - virtualizer.options.scrollMargin}px)`,
               paddingBottom: 8,
+              contain: "layout paint style",
             }}
             className={cols === 2 ? "grid grid-cols-2 gap-2" : ""}
           >
