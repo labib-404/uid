@@ -27,12 +27,37 @@ export default function AppLayout() {
       document.documentElement.style.setProperty("--header-h", `${Math.round(h)}px`);
     };
     apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
+
+    // Prefer ResizeObserver when available so we catch header size changes
+    // that don't come from a window resize (font load, content toggle,
+    // safe-area changes). Fall back to window resize + a few delayed
+    // re-measures on older browsers (e.g. older iOS / WebViews).
+    const hasRO = typeof ResizeObserver !== "undefined";
+    let ro: ResizeObserver | null = null;
+    const fallbackTimers: number[] = [];
+
+    if (hasRO) {
+      ro = new ResizeObserver(apply);
+      ro.observe(el);
+    } else {
+      // Re-measure shortly after mount to catch late layout shifts
+      // (web fonts, images) since we have no observer.
+      for (const delay of [120, 400, 1200]) {
+        fallbackTimers.push(window.setTimeout(apply, delay));
+      }
+      document.addEventListener("visibilitychange", apply);
+      window.addEventListener("orientationchange", apply);
+    }
     window.addEventListener("resize", apply);
+
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
       window.removeEventListener("resize", apply);
+      if (!hasRO) {
+        for (const t of fallbackTimers) clearTimeout(t);
+        document.removeEventListener("visibilitychange", apply);
+        window.removeEventListener("orientationchange", apply);
+      }
     };
   }, []);
 
