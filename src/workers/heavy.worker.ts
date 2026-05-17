@@ -58,17 +58,20 @@ function scan(req: ScanReq) {
   };
   let collected = 0;
   for (const i of req.items) {
+    const uid = asString(i.uid);
+    if (!uid) continue;
+    const lastAttemptAt = asString(i.fetch_last_attempt_at);
     if (collected >= req.scanLimit) break;
     if (i.instagram_checking || i.fetch_status === "pending" || i.fetch_status === "retrying") continue;
     if (isComplete(i)) continue;
     if (
-      i.fetch_last_attempt_at &&
-      req.now - new Date(i.fetch_last_attempt_at).getTime() < req.cooldownMs
+      lastAttemptAt &&
+      req.now - new Date(lastAttemptAt).getTime() < req.cooldownMs
     ) continue;
 
     let bucket: keyof typeof buckets | null = null;
     if (i.fetch_status === "not_found") {
-      const t = tries.get(i.uid) ?? 0;
+      const t = tries.get(uid) ?? 0;
       if (t >= req.notFoundMax) continue;
       bucket = "not_found";
     } else if (i.fetch_status === "failed" || i.fetch_status === "rate_limited") {
@@ -79,17 +82,17 @@ function scan(req: ScanReq) {
       bucket = "other";
     }
     if (!bucket) continue;
-    if (scheduled.has(i.uid)) continue;
-    const t = tries.get(i.uid) ?? 0;
+    if (scheduled.has(uid)) continue;
+    const t = tries.get(uid) ?? 0;
     if (t >= req.max) continue;
-    buckets[bucket].push({ uid: i.uid, tries: t });
+    buckets[bucket].push({ uid, tries: t });
     collected++;
   }
   return buckets;
 }
 
-function chunk(items: any[], size: number) {
-  const out: any[][] = [];
+function chunk(items: unknown[], size: number) {
+  const out: unknown[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
 }
@@ -97,7 +100,7 @@ function chunk(items: any[], size: number) {
 self.onmessage = (e: MessageEvent<Req>) => {
   const req = e.data;
   try {
-    let result: any;
+    let result: WorkerResult;
     if (req.kind === "compact") result = compact(req.items);
     else if (req.kind === "scan") result = scan(req);
     else if (req.kind === "chunk") result = chunk(req.items, req.size);
