@@ -34,8 +34,8 @@
 ## 🚀 Run Locally
 
 ```bash
-git clone https://github.com/labib-404/UID-MANEGER.git
-cd UID-MANEGER
+git clone https://github.com/labib-404/uid.git
+cd uid
 npm install
 npm run dev
 ```
